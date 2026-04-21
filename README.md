@@ -63,19 +63,17 @@ Agents follow an **orchestrator → sub-agent** architecture. The `orchestrator-
 Point Claude Code to the GitHub repository URL and it will install the plugin automatically:
 
 ```bash
-claude plugins add https://github.com/Matisantillan11/ai-toolbox
+claude 
 ```
-
-Then enable it:
 
 ```bash
-claude plugins enable ai-toolbox
-```
+/plugin marketplace add axis-human/dev-workflow-plugin
+```   
 
 Claude Code fetches the plugin from GitHub and keeps it available. To update to the latest version at any time:
 
 ```bash
-claude plugins update ai-toolbox
+claude plugins update axis-human-ai-toolbox
 ```
 
 ---
@@ -89,14 +87,14 @@ Use this option if you want to modify skills or develop your own on top of this 
 Pick a permanent location on your machine — this folder needs to stay there as long as you want the plugin active.
 
 ```bash
-git clone https://github.com/Matisantillan11/ai-toolbox ~/tools/ai-toolbox
+git clone https://github.com/Axis-Human/dev-workflow-plugin ~/tools/axis-human-ai-toolbox
 ```
 
 **2. Register the plugin with Claude Code**
 
 ```bash
-claude plugins add ~/tools/ai-toolbox
-claude plugins enable ai-toolbox
+claude /plugin marketplace add ~/tools/axis-human-ai-toolbox
+claude plugins enable axis-human-ai-toolbox
 ```
 
 Or open `~/.claude/settings.json` and add it manually:
@@ -104,7 +102,7 @@ Or open `~/.claude/settings.json` and add it manually:
 ```json
 {
   "enabledPlugins": {
-    "ai-toolbox": true
+    "axis-human-ai-toolbox": true
   }
 }
 ```
@@ -114,7 +112,7 @@ Or open `~/.claude/settings.json` and add it manually:
 Since the plugin runs from your local clone, updating is a regular `git pull`:
 
 ```bash
-cd ~/tools/ai-toolbox && git pull
+cd ~/tools/axis-human-ai-toolbox && git pull
 ```
 
 ---
@@ -210,7 +208,7 @@ Agents are invoked by describing the task naturally — Claude Code selects the 
 ## Project structure
 
 ```
-ai-toolbox/
+axis-human-ai-toolbox/
 ├── .claude-plugin/
 │   └── plugin.json                      # Plugin metadata
 ├── agents/
