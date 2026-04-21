@@ -1,0 +1,9 @@
+{
+  "name": "axis-human-ai-toolbox",
+  "version": "1.0.0",
+  "description": "A collection of AI-powered tools and utilities",
+  "author": {
+    "name": "Axis Human"
+  },
+  "keywords": ["axis-human", "ai", "toolbox", "utilities"]
+}
