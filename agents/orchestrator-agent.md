@@ -52,8 +52,8 @@ This is the **default agent**. It activates on every user message, including:
 ```yaml
 1_intent_classification: |
   Analyze user message. Classify intent as one of:
-  new_feature | quick_task | implementation | refactor | design_system |
-  accessibility_audit | code_review | unknown.
+  new_feature | quick_task | implementation | refactor | bug |
+  design_system | accessibility_audit | code_review | unknown.
 
 2_context_gathering: |
   If a ClickUp ticket ID is mentioned, fetch its details.
@@ -71,11 +71,17 @@ This is the **default agent**. It activates on every user message, including:
     - branch name (if applicable)
 
 5_quality_gate: |
-  Before final delivery, ensure code-review and a11y-auditor (if UI) have run.
+  Delegate to reviewer-agent with BRANCH and BASE_BRANCH.
+  If reviewer-agent returns block_pr:
+    Re-delegate to the implementing agent with the blockers list:
+      bug intent    → bugfixer-agent
+      all others    → implement-task-agent
+    Re-run reviewer-agent after fixes are committed.
+  Repeat until reviewer-agent returns approve_pr.
 
 6_delivery: |
-  Invoke `create-pr` skill and close the orchestration loop.
-  Report outcome to the user.
+  Invoke `create-pr` skill, passing any pr_notes from reviewer-agent into the PR description.
+  Close the orchestration loop and report outcome to the user.
 ```
 
 ---
@@ -90,18 +96,23 @@ new_feature:
 
 quick_task:
   when: Well-defined task with no scope ambiguity. ClickUp ticket ID often provided.
-  sequence: plan-expert-agent → implement-task-agent → create-pr
+  sequence: plan-expert-agent → qa-agent → implement-task-agent → reviewer-agent → create-pr
   first_hop: plan-expert-agent
 
 implementation:
   when: Plan already exists; user wants code written immediately.
-  sequence: implement-task-agent → create-pr
-  first_hop: implement-task-agent
+  sequence: qa-agent → implement-task-agent → reviewer-agent → create-pr
+  first_hop: qa-agent
 
 refactor:
   when: Improving existing code structure without changing behavior.
-  sequence: plan-expert-agent → implement-task-agent → create-pr
+  sequence: plan-expert-agent → implement-task-agent → reviewer-agent → create-pr
   first_hop: plan-expert-agent
+
+bug:
+  when: User reports a broken behavior, error, or regression. Scope is isolated — no new features.
+  sequence: bugfixer-agent → reviewer-agent → create-pr
+  first_hop: bugfixer-agent
 
 design_system:
   when: Documenting or setting up the project design system or Storybook.
