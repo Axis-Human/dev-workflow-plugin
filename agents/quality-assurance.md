@@ -1,5 +1,5 @@
 ---
-name: qa
+name: quality-assurance-agent
 description: >
   Sub-agent: invoked only by the orchestrator-agent after plan-expert-agent confirms
   subtasks. Writes failing tests (TDD red phase) that define expected behavior before
