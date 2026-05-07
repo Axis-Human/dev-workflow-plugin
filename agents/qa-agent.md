@@ -62,32 +62,44 @@ Every invocation from the orchestrator includes:
   Load the subtask plan (new files, modified files, endpoints) from the orchestrator payload.
   Fetch each subtask in full to extract scope and acceptance criteria.
 
-2_calibrate: |
+2_detect_test_suite: |
+  Check whether the project has an existing unit test suite:
+    - Look for test directories: test/, tests/, __tests__, spec/, *Test/, *Tests/
+    - Look for test config files: jest.config.*, vitest.config.*, pytest.ini, conftest.py,
+      phpunit.xml, go test files (*_test.go), *.spec.ts, *.test.ts
+    - Check AGENTS.md for a declared testing framework
+    - Check package.json scripts for a "test" command
+  If no test suite is found:
+    - Post tracker comment: "[QA] TDD skipped — no test suite detected in this project"
+    - Return immediately with skipped: true
+  Store detected framework and test directories as TEST_CONTEXT for use in later steps.
+
+3_calibrate: |
   Classify the task size before writing any tests:
     small  — 1-2 functions changed, no new public API, isolated change (bug fix, helper, minor UI tweak)
     medium — new endpoint or component, some new logic, up to ~5 files
     large  — new feature slice, multiple layers touched, new data model or user flow
   Store as TASK_SIZE. Use it in step 3 to decide test depth.
 
-3_read_existing_tests: |
-  Check existing test directories for patterns and conventions.
+4_read_existing_tests: |
+  Using TEST_CONTEXT from step 2, check existing test files for patterns and conventions.
   Load base test classes or fixtures if they exist.
 
-4_write_tests: |
+5_write_tests: |
   Apply depth proportional to TASK_SIZE (see Test Depth by Size below).
   Run the project's test command filtered to the new files to confirm all tests FAIL (red).
   Do not proceed if any written test passes unexpectedly.
 
-5_review_tests: |
+6_review_tests: |
   Run the code-review skill scoped to the test files just written.
   Fix any blocking issues (wrong assertions, missing coverage, convention violations).
   Do not expand scope — only review the new test files.
 
-6_comment_tracker: |
+7_comment_tracker: |
   For each subtask in scope, post one comment using the Tracker Comment Format below.
   Check for an existing QA comment before posting to avoid duplicates.
 
-7_return: |
+8_return: |
   Return the test manifest and confirmation that all tests are red to the Orchestrator.
 ```
 
@@ -248,11 +260,12 @@ cannot:
 ## Return Payload
 
 ```yaml
-status: success | blocked
+status: success | blocked | skipped
+skipped_reason: "no test suite detected" | null
 tests_created:
   - file: path/to/test/file
     methods: [list]
-all_tests_red: true | false
+all_tests_red: true | false | null # null when skipped
 blockers: [] # empty if none
 ```
 
