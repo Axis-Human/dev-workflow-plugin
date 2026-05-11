@@ -20,6 +20,7 @@ tools:
   - TaskCreate
   - TaskUpdate
 skills:
+  - wiki-query
   - code-review
 ---
 
@@ -68,6 +69,8 @@ Every invocation from the orchestrator includes:
   Run the test and confirm it fails (red). Do not proceed without a red test.
 
 2_isolate: |
+  Run wiki-query skill with the affected module or component name to retrieve
+  documented architecture and expected behavior before reading source files.
   Trace the request/call flow from the entry point to the failure.
   Read each file in the path — do not guess.
   Narrow to the exact file and line where behavior diverges from expectation.

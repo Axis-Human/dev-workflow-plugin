@@ -4,6 +4,7 @@ description: >
   The default entry point for ai-toolbox. Use this agent for ANY user request —
   feature planning, task implementation, code review, design systems, accessibility,
   or knowledge management. Analyzes intent and routes to the correct sub-agent automatically.
+  Checks for WIKI.md at startup and delegates to wiki-agent to initialize the wiki if it is missing before any other step.
   Examples: "I want to plan a new feature", "Implement ticket CU-abc123", "Set up
   the design system for this project", "Review my code changes before I commit",
   "Work on this task and open a PR when done".
@@ -50,10 +51,17 @@ This is the **default agent**. It activates on every user message, including:
 ## Workflow
 
 ```yaml
+0_wiki_check: |
+  Before any other step, check if the wiki is initialized:
+    bash: test -f WIKI.md && echo "exists" || echo "missing"
+  If missing: delegate to wiki-agent with operation=init.
+  Wait for wiki-agent to return before proceeding to step 1.
+  If found: proceed immediately.
+
 1_intent_classification: |
   Analyze user message. Classify intent as one of:
   new_feature | quick_task | implementation | refactor | bug |
-  design_system | accessibility_audit | code_review | unknown.
+  design_system | accessibility_audit | code_review | wiki_management | unknown.
 
 2_context_gathering: |
   If a ClickUp ticket ID is mentioned, fetch its details.
@@ -128,6 +136,11 @@ code_review:
   when: User wants to review uncommitted or branch changes before a PR.
   sequence: code-review (Skill)
   first_hop: code-review
+
+wiki_management:
+  when: User explicitly requests wiki operations — sync, reinitialize, or query the wiki.
+  sequence: wiki-agent
+  first_hop: wiki-agent
 ```
 
 ---
