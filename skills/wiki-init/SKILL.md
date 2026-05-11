@@ -378,6 +378,72 @@ Do not modify directly — use `/wiki-forge` to ingest them.
 
 ---
 
+### 5.8 — WIKI.md
+
+Create `WIKI.md` at the project root. This file is the initialization marker read by the
+orchestrator at startup and the entry point for any agent that needs wiki instructions.
+
+Write in `LANGUAGE`:
+
+```markdown
+# Wiki — [VAULT_NAME]
+
+This project has a knowledge wiki in `wiki/`.
+Consult it before investigating the codebase.
+
+## How to use
+
+- **Query**: use `/wiki-query` or ask about any component, module, or pattern.
+- **Sync**: use `/wiki-sync` to bring the wiki up to date with recent commits.
+- **Ingest**: use `/wiki-forge` to process new documents placed in `raw/`.
+
+## Entry point
+
+`wiki/index.md` — master catalog of all documented pages, organized by category.
+```
+
+---
+
+### 5.9 — CLAUDE.md wiki section
+
+Ensure the project's `CLAUDE.md` instructs agents to always consult the wiki before
+reading source code.
+
+**If `CLAUDE.md` does not exist:** create it with the following content (in `LANGUAGE`):
+
+```markdown
+# [VAULT_NAME]
+
+## Wiki
+
+This project has a documented knowledge wiki. Before investigating the codebase for
+any architecture, module, pattern, or domain question, **always read `WIKI.md` first**
+and use `/wiki-query` to find documented information.
+Do not grep the codebase for facts that may already be in the wiki.
+
+- Entry point: `WIKI.md`
+- Full catalog: `wiki/index.md`
+```
+
+**If `CLAUDE.md` already exists:** check whether it contains a `## Wiki` section.
+- If **not present**: append the following block at the end of the file (in `LANGUAGE`):
+
+  ```markdown
+  ## Wiki
+
+  This project has a documented knowledge wiki. Before investigating the codebase for
+  any architecture, module, pattern, or domain question, **always read `WIKI.md` first**
+  and use `/wiki-query` to find documented information.
+  Do not grep the codebase for facts that may already be in the wiki.
+
+  - Entry point: `WIKI.md`
+  - Full catalog: `wiki/index.md`
+  ```
+
+- If **already present**: skip — do not duplicate.
+
+---
+
 ## Step 6 — Report and launch forge
 
 Report to the user:
@@ -390,6 +456,7 @@ Type: [PROJECT_TYPE]
 Repos configured: [list or "none"]
 
 Files created:
+  WIKI.md
   CLAUDE.md
   .claude/wiki-conventions.md
   wiki/sync-config.md
