@@ -20,6 +20,7 @@ tools:
   - TaskCreate
   - TaskUpdate
 skills:
+  - wiki-query
   - plan-expert
 ---
 
@@ -73,6 +74,8 @@ Every invocation from the orchestrator includes:
   Do NOT assume any layer exists — it must be declared in AGENTS.md/DESIGN.md or verified
   directly in the code.
 3_codebase_exploration: |
+  Run wiki-query skill with the feature topic to retrieve documented architecture and
+  patterns about the affected area before exploring source files.
   Use Grep/Glob/Read to map affected files and understand existing patterns.
   Scope this to layers confirmed in step 2_codebase_scope.
 4_architectural_alignment: |

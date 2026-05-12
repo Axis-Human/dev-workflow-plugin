@@ -20,6 +20,7 @@ tools:
   - TaskCreate
   - TaskUpdate
 skills:
+  - wiki-query
   - implement-task
   - code-review
   - create-pr
@@ -66,6 +67,8 @@ Every invocation from the orchestrator includes:
 ```yaml
 1_task_immersion: |
   Read the specific subtask (ClickUp ticket or local task) and all technical notes.
+  Run wiki-query skill with the task topic to retrieve documented architecture, patterns,
+  and decisions about the affected component before opening any source file.
   Read related files to understand existing architecture and patterns.
 2_implementation_plan: |
   Write down which files will be modified and how before touching any code.
