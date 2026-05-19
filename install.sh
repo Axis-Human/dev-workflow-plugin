@@ -38,73 +38,44 @@ echo "Installing axis-human-ai-toolbox plugin..."
 claude plugin install axis-human-ai-toolbox
 
 # ---------------------------------------------------------------------------
-# 2. Ensure settings file exists
+# 2. Ensure settings file exists (node requires valid JSON to parse)
 # ---------------------------------------------------------------------------
 if [ ! -f "$SETTINGS_FILE" ]; then
   echo "{}" > "$SETTINGS_FILE"
 fi
 
 # ---------------------------------------------------------------------------
-# 3. Merge hooks into settings.json (Python used for safe JSON handling)
+# 3. Merge hooks into settings.json (node is bundled with Claude Code)
 # ---------------------------------------------------------------------------
 echo "Configuring hooks in $SETTINGS_FILE..."
 
-python3 - "$SETTINGS_FILE" <<'PYTHON'
-import json, sys
+node - "$SETTINGS_FILE" <<'JS'
+const fs = require('fs');
+const file = process.argv[2];
+const settings = JSON.parse(fs.readFileSync(file, 'utf8'));
 
-settings_file = sys.argv[1]
+const UPS_CMD = "echo 'MANDATORY ACTION: Before doing anything else, invoke the axis-human-ai-toolbox:orchestrator-agent agent to handle this request.'";
+const SS_CMD  = "echo 'MANDATORY ACTION: A subagent started. Record a dedicated analytics trace for this delegated execution, setting callerAgent to orchestrator-agent, invokedName to the subagent name, invocationType to agent, and callCount to reflect the number of delegations so far for this interaction.'";
 
-with open(settings_file, "r") as f:
-    settings = json.load(f)
+if (!settings.hooks) settings.hooks = {};
 
-user_prompt_hook = {
-    "matcher": "",
-    "hooks": [
-        {
-            "type": "command",
-            "command": "echo 'MANDATORY ACTION: Before doing anything else, invoke the axis-human-ai-toolbox:orchestrator-agent agent to handle this request.'"
-        }
-    ]
+function commandPresent(entries, cmd) {
+  return (entries || []).some(e => (e.hooks || []).some(h => h.command === cmd));
 }
 
-subagent_hook = {
-    "hooks": [
-        {
-            "type": "command",
-            "command": "echo 'MANDATORY ACTION: A subagent started. Record a dedicated analytics trace for this delegated execution, setting callerAgent to orchestrator-agent, invokedName to the subagent name, invocationType to agent, and callCount to reflect the number of delegations so far for this interaction.'"
-        }
-    ]
+if (!commandPresent(settings.hooks.UserPromptSubmit, UPS_CMD)) {
+  settings.hooks.UserPromptSubmit = settings.hooks.UserPromptSubmit || [];
+  settings.hooks.UserPromptSubmit.push({ matcher: "", hooks: [{ type: "command", command: UPS_CMD }] });
 }
 
-if "hooks" not in settings:
-    settings["hooks"] = {}
+if (!commandPresent(settings.hooks.SubagentStart, SS_CMD)) {
+  settings.hooks.SubagentStart = settings.hooks.SubagentStart || [];
+  settings.hooks.SubagentStart.push({ hooks: [{ type: "command", command: SS_CMD }] });
+}
 
-def command_present(hook_entries, target_command):
-    return any(
-        any(h.get("command") == target_command for h in entry.get("hooks", []))
-        for entry in hook_entries
-    )
-
-# UserPromptSubmit
-ups_cmd = user_prompt_hook["hooks"][0]["command"]
-ups_list = settings["hooks"].get("UserPromptSubmit", [])
-if not command_present(ups_list, ups_cmd):
-    ups_list.append(user_prompt_hook)
-settings["hooks"]["UserPromptSubmit"] = ups_list
-
-# SubagentStart
-ss_cmd = subagent_hook["hooks"][0]["command"]
-ss_list = settings["hooks"].get("SubagentStart", [])
-if not command_present(ss_list, ss_cmd):
-    ss_list.append(subagent_hook)
-settings["hooks"]["SubagentStart"] = ss_list
-
-with open(settings_file, "w") as f:
-    json.dump(settings, f, indent=2)
-    f.write("\n")
-
-print("Hooks configured successfully.")
-PYTHON
+fs.writeFileSync(file, JSON.stringify(settings, null, 2) + '\n');
+console.log('Hooks configured successfully.');
+JS
 
 echo ""
 echo "Installation complete."
