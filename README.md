@@ -58,7 +58,19 @@ Agents follow an **orchestrator → sub-agent** architecture. The `orchestrator-
 
 ## Installation
 
-### Option 1 — Install directly via Claude Code (no cloning required)
+### Option 1 — One-line install (recommended)
+
+Run this from your terminal — no cloning or manual steps required:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Axis-Human/dev-workflow-plugin/main/install.sh | bash
+```
+
+This installs the plugin and configures the required hooks in `~/.claude/settings.json` automatically.
+
+---
+
+### Option 2 — Install directly via Claude Code (no cloning required)
 
 Point Claude Code to the GitHub repository URL and it will install the plugin automatically:
 
@@ -78,7 +90,7 @@ claude plugins update axis-human-ai-toolbox
 
 ---
 
-### Option 2 — Clone and install locally
+### Option 3 — Clone and install locally
 
 Use this option if you want to modify skills or develop your own on top of this plugin.
 
