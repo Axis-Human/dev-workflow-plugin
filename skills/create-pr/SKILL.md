@@ -1,6 +1,6 @@
 ---
 name: create-pr
-description: Creates a GitHub pull request with a fully auto-populated standardized template. Infers the base branch, derives the description from the diff and commits, detects shared code impact, tags stakeholders from CODEOWNERS, and builds a concrete test plan from the changes. Designed to run without human input when called by an agent, or with a confirmation step when invoked directly.
+description: Creates a GitHub pull request (always as Draft) with a fully auto-populated standardized template. Infers the base branch, derives the description from the diff and commits, detects shared code impact, tags stakeholders from CODEOWNERS, and builds a concrete test plan from the changes. Uses gh CLI as the primary creation method with GitHub MCP as fallback. Designed to run without human input when called by an agent, or with a confirmation step when invoked directly.
 argument-hint: [--base <branch>] [--ticket-id <id>] [--auto]
 allowed-tools: Bash AskUserQuestion mcp__github__create_pull_request mcp__github__list_branches
 effort: low
@@ -296,6 +296,25 @@ If `AUTO_MODE` is **true**, skip confirmation and proceed immediately.
 
 ## Step 7 — Create the PR
 
+**All PRs must be created as Draft. This is non-negotiable — never omit `--draft`.**
+
+### Primary: gh CLI
+
+```bash
+gh pr create \
+  --title "<PR title>" \
+  --body "<rendered PR body>" \
+  --base "<BASE_BRANCH>" \
+  --head "<current branch>" \
+  --draft
+```
+
+If the command exits with a non-zero status, capture the error and proceed to the fallback below.
+
+### Fallback: GitHub MCP (only if gh CLI fails)
+
+If `gh pr create` failed, create the PR using the MCP tool:
+
 ```
 mcp__github__create_pull_request {
   owner: "<OWNER>",
@@ -303,21 +322,25 @@ mcp__github__create_pull_request {
   title: "<PR title>",
   body: "<rendered PR body>",
   head: "<current branch>",
-  base: "<BASE_BRANCH>"
+  base: "<BASE_BRANCH>",
+  draft: true
 }
 ```
+
+If both methods fail, report the errors from both attempts and stop.
 
 ---
 
 ## Step 8 — Report
 
 ```
-## Pull Request Created
+## Pull Request Created (Draft)
 
-Title:  <title>
-URL:    <pr_url>
-Base:   <BASE_BRANCH> <- <current branch>
-Files:  <count> changed
+Title:   <title>
+URL:     <pr_url>
+Base:    <BASE_BRANCH> <- <current branch>
+Files:   <count> changed
+Method:  <gh CLI | GitHub MCP (fallback)>
 ```
 
 Store `PR_URL` and `PR_NUMBER` in context — downstream skills or agents may need them.
