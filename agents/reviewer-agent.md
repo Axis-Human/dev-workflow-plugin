@@ -15,6 +15,7 @@ tools:
   - Glob
   - Bash
 skills:
+  - wiki-query
   - code-review
   - a11y-auditor
 ---

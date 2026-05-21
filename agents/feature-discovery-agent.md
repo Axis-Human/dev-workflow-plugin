@@ -15,6 +15,7 @@ tools:
   - TaskCreate
   - TaskUpdate
 skills:
+  - wiki-query
   - feature-discovery
 ---
 
@@ -53,6 +54,12 @@ Every invocation from the orchestrator includes:
 ## Workflow
 
 ```yaml
+0_wiki_context: |
+  Query the wiki for context related to the user's seed — existing features,
+  entities, flows, or prior decisions that overlap with the proposed work.
+  Use results to skip questions the wiki already answers and to flag
+  contradictions ("the wiki says X, you're describing Y — which is right?").
+  If no wiki or no relevant pages: proceed normally.
 1_initial_baseline: |
   Parse user seed or ask: "What are we building?"
 2_phase_1_clarification: |

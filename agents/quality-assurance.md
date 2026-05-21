@@ -21,6 +21,7 @@ tools:
   - TaskCreate
   - TaskUpdate
 skills:
+  - wiki-query
   - code-review
 ---
 
