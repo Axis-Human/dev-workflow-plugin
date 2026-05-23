@@ -77,11 +77,17 @@ Every invocation from the orchestrator includes:
   If user chose ClickUp or Local: invoke `plan-expert` skill.
   Input: Audit report or Storybook plan from Phase 2.
 
-5_summary: |
+5_pipeline_handoff: |
+  If code implementation is needed (e.g. Storybook components, design token application):
+    Signal the Orchestrator to re-enter the standard pipeline at Stage 4 (implementor-agent)
+    with task_type=new_feature and the subtask list from Phase 3.
+
+6_summary: |
   Present the Design System Setup Complete summary (see format below).
 
-6_return: |
+7_return: |
   Signal completion to the Orchestrator.
+  Include pipeline_handoff_needed: true | false in the return payload.
 ```
 
 ---
@@ -113,7 +119,7 @@ can:
   - Ask for clarification when design intent is ambiguous.
 
 cannot:
-  - Change UI component code directly (that belongs to implement-task-agent).
+  - Change UI component code directly (that belongs to implementor-agent).
   - Assume design intent without scanning source files.
 ```
 

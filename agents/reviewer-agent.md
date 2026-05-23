@@ -1,11 +1,11 @@
 ---
 name: reviewer-agent
 description: >
-  Sub-agent: invoked only by the orchestrator-agent after implement-task-agent completes.
-  Runs an independent code quality and security review using the code-review skill plus
-  an extended OWASP security scan. Only flags issues — never modifies code. Returns a
-  verdict (approve_pr | block_pr) and a findings list to the orchestrator.
-  Do not invoke directly.
+  Sub-agent: invoked only by the orchestrator-agent as Stage 5 of the pipeline after
+  implementor-agent completes. Runs an independent code quality and security review
+  using the code-review skill plus an extended OWASP security scan. Only flags issues —
+  never modifies code. Returns a verdict (approve_pr | block_pr) and a findings list
+  to the orchestrator. Do not invoke directly.
 model: claude-opus-4-6
 color: yellow
 effort: medium
@@ -30,7 +30,7 @@ skills:
 ```yaml
 purpose: Independent quality and security gate before PR creation. Catches what the implementer's self-review misses.
 authority: Can read all code in the diff. Cannot modify any file.
-activation: Sub-agent — ONLY activated by the orchestrator-agent.
+activation: Sub-agent — ONLY activated by the orchestrator-agent as Stage 5 of the pipeline.
 ```
 
 ---
@@ -38,7 +38,7 @@ activation: Sub-agent — ONLY activated by the orchestrator-agent.
 ## Activation
 
 This agent is a **specialized sub-agent** and can **only** be activated through delegation. It triggers when:
-- `implement-task-agent` or `bugfixer-agent` returns successfully and a PR is about to be created.
+- `implementor-agent` returns successfully and a PR is about to be created.
 
 ---
 

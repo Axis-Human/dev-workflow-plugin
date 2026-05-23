@@ -26,23 +26,30 @@ Skills are reusable workflows invoked with a `/` command directly in Claude Code
 
 ### Agents
 
-Agents follow an **orchestrator → sub-agent** architecture. The `orchestrator-agent` is the only agent Claude auto-selects — it analyzes every user request and routes to the correct specialist sub-agent.
+Agents follow a **fixed 5-stage pipeline** architecture. The `orchestrator-agent` is the only agent Claude auto-selects — it classifies every code task and runs it through the same pipeline regardless of task type.
 
 ### Orchestrator (default)
 
 | Agent | Role |
 |---|---|
-| **orchestrator-agent** | **Default entry point.** Handles any user request by classifying intent and routing to the right sub-agent. Always runs first; always responds last. |
+| **orchestrator-agent** | **Default entry point.** Classifies intent and runs all code tasks through the 5-stage pipeline. Always runs first; always responds last. |
 
-### Sub-agents (invoked by orchestrator only)
+### Pipeline stages (all code tasks: new_feature, bug, hotfix, refactor, quick_task, implementation)
+
+| Stage | Agent | Responsibility |
+|---|---|---|
+| 1 | **analyst-agent** | Produces FEATURE_SPEC — full discovery, intake validation, or bug scope confirmation based on task type. |
+| 2 | **planner-agent** | Decomposes FEATURE_SPEC into ordered 8-section subtasks. |
+| 3 | **qa-agent** | Writes failing tests (TDD for new functionality, spec tests for fixes, skips when not applicable). |
+| 4 | **implementor-agent** | Executes the subtask plan. Bug/hotfix mode starts with reproducing test; feature/refactor mode implements directly. |
+| 5 | **reviewer-agent** | Independent code quality and security gate. Returns approve_pr or block_pr. Loops back to implementor if blocked. |
+
+### Utility agents (outside the pipeline)
 
 | Agent | Activated when |
 |---|---|
-| **planning-features-agent** | `new_feature` intent — coordinates discovery + planning end-to-end. |
-| **feature-discovery-agent** | Called by `planning-features-agent` — structured requirement interviews → FEATURE_SPEC + ClickUp ticket. |
-| **plan-expert-agent** | `quick_task`, `refactor`, or after discovery — decomposes specs into 8-section subtasks. |
-| **implement-task-agent** | `implementation` intent or after planning — writes code, runs review, commits, opens PR. |
-| **design-system-setup-agent** | `design_system` intent — design-expert → design-system-docs → plan-expert pipeline. |
+| **wiki-agent** | Orchestrator startup (wiki missing) or explicit wiki operations. |
+| **design-system-setup-agent** | `design_system` intent — design-expert → design-system-docs → plan-expert. Hands off to pipeline if code is needed. |
 
 > **How to use:** Just describe what you want in natural language. The orchestrator routes automatically. Use `/` skills for direct, one-off invocations when you know exactly which step to run.
 
@@ -224,12 +231,14 @@ axis-human-ai-toolbox/
 ├── .claude-plugin/
 │   └── plugin.json                      # Plugin metadata
 ├── agents/
-│   ├── orchestrator-agent.md            # Default entry point — routes all intents
-│   ├── planning-features-agent.md       # Sub-agent: discovery + planning pipeline
-│   ├── feature-discovery-agent.md       # Sub-agent: requirement interviews
-│   ├── plan-expert-agent.md             # Sub-agent: technical decomposition
-│   ├── implement-task-agent.md          # Sub-agent: code + PR delivery
-│   ├── design-system-setup-agent.md     # Sub-agent: design system pipeline
+│   ├── orchestrator-agent.md            # Default entry point — pipeline runner
+│   ├── analyst-agent.md                 # Stage 1: requirements → FEATURE_SPEC
+│   ├── planner-agent.md                 # Stage 2: FEATURE_SPEC → subtask list
+│   ├── qa-agent.md                      # Stage 3: smart test writer (TDD/spec/skip)
+│   ├── implementor-agent.md             # Stage 4: code executor (feature + bug modes)
+│   ├── reviewer-agent.md                # Stage 5: independent quality gate
+│   ├── wiki-agent.md                    # Utility: wiki init/sync/query
+│   ├── design-system-setup-agent.md     # Utility: design system pipeline
 ├── skills/
 │   ├── a11y-auditor/
 │   │   └── SKILL.md
@@ -313,8 +322,8 @@ axis-human-ai-toolbox/
    Agent orchestration instructions...
    ```
 
-   **Important:** All agents in this plugin are sub-agents. Only `orchestrator-agent` is
-   auto-selected by Claude Code. New agents must be registered in the orchestrator's Routing Table.
+   **Important:** All pipeline agents are sub-agents. Only `orchestrator-agent` is
+   auto-selected by Claude Code. New pipeline stages must be registered in the orchestrator's workflow steps. Utility agents must be added to the orchestrator's special case routing.
 
 3. Use the `skills` frontmatter field to preload skills. This ensures skills execute inline in the agent's context rather than being delegated to a subagent.
 
