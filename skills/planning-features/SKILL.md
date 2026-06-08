@@ -1,7 +1,7 @@
 ---
 name: planning-features
 description: End-to-end feature planning. Runs feature-discovery to gather and document all requirements, then automatically hands off the resulting ClickUp ticket to plan-expert to break it into actionable subtasks. Use when starting work on any new feature from scratch.
-allowed-tools: AskUserQuestion mcp__clickup__clickup_get_task mcp__clickup__clickup_create_task mcp__clickup__clickup_get_workspace_hierarchy TaskCreate TaskUpdate
+allowed-tools: AskUserQuestion mcp__clickup__clickup_get_task mcp__clickup__clickup_create_task mcp__clickup__clickup_get_workspace_hierarchy TaskCreate TaskUpdate Skill
 effort: high
 ---
 
@@ -20,8 +20,8 @@ Run the full `feature-discovery` skill as defined in its SKILL.md:
 - Ask the user if they want to create a ClickUp ticket
 
 **If the user agrees to create a ClickUp ticket:**
-- Create the ticket as instructed by the skill
-- Capture `TICKET_ID` and `TICKET_URL` from the ClickUp response
+- The `feature-discovery` skill will delegate to `create-task` to handle template selection, filling, and creation
+- After `create-task` completes, capture `TICKET_ID` and `TICKET_URL` from its output
 
 **If the user declines:**
 - Store the full confirmed feature spec markdown as `FEATURE_SPEC`
