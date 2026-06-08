@@ -1,8 +1,8 @@
 ---
 name: plan-expert
-description: Plans how to execute a task or feature by breaking it into detailed, actionable subtasks. Accepts a ClickUp ticket ID or a free-form description. If a ticket is provided, fetches it via ClickUp MCP and creates subtasks directly on the ticket. If a description is provided, creates a temporary local task list covering everything needed to achieve the goal.
+description: Plans how to execute a task or feature by breaking it into detailed, actionable subtasks. Accepts a ClickUp ticket ID or a free-form description. If a ticket is provided, fetches it via ClickUp MCP and creates subtasks directly on the ticket. If a description is provided, delegates to create-task to create a parent ClickUp ticket first, then creates subtasks on it.
 argument-hint: [--ticket-id <id>] [--description "<text>"]
-allowed-tools: Read Grep Glob Bash AskUserQuestion mcp__clickup__clickup_get_task mcp__clickup__clickup_create_task mcp__clickup__clickup_get_workspace_hierarchy TaskCreate TaskUpdate
+allowed-tools: Read Grep Glob Bash AskUserQuestion mcp__clickup__clickup_get_task mcp__clickup__clickup_create_task mcp__clickup__clickup_get_workspace_hierarchy TaskCreate TaskUpdate Skill
 effort: medium
 ---
 
@@ -247,7 +247,48 @@ All subtasks have been added to ticket <ticket-id>.
 
 ### If only `--description` was provided (Case C):
 
-Create a local task using `TaskCreate` for each subtask. Set the task title to the subtask title and the body to the complete rendered template from Step 3 — all 8 sections in order: Context, What to implement, Where, Acceptance criteria, Out of scope, Depends on, Technical notes, Definition of done. Do not abbreviate, merge, or omit any section. Report:
+First, create a parent ClickUp task for this work by delegating to the `create-task` skill. Pass the description and let `create-task` classify it and apply the correct template:
+
+```
+/create-task --input "<planning description>"
+```
+
+`create-task` will:
+1. Classify the input into the appropriate task type ([US], [TASK], [IMP], etc.)
+2. Fill out the standardized template
+3. Ask the user to confirm the ticket
+4. Ask which ClickUp list to use
+5. Create the parent task and return the task ID and URL
+
+After `create-task` completes, capture `PARENT_TICKET_ID` and `PARENT_TICKET_URL` from its output.
+
+Then create each subtask as a child of the parent task using:
+
+```
+mcp__clickup__clickup_create_task {
+  list_id: "<same list as parent task>",
+  name: "<subtask title>",
+  description: "<full subtask body using the template from Step 3 — all sections included>",
+  parent: "<PARENT_TICKET_ID>"
+}
+```
+
+The `description` field must be the complete rendered template for that subtask — all 8 sections in order. Do not abbreviate, merge, or omit any section.
+
+After all subtasks are created, report:
+
+```
+## Subtasks Created
+
+✅ Subtask 1 — <title> (id: ...)
+✅ Subtask 2 — <title> (id: ...)
+...
+
+Parent ticket: <PARENT_TICKET_URL>
+All subtasks have been added to the parent ticket.
+```
+
+**Fallback (if user declines ClickUp creation in `create-task`):** create local tasks using `TaskCreate` for each subtask and report:
 
 ```
 ## Task List Created (local)
@@ -256,7 +297,7 @@ Create a local task using `TaskCreate` for each subtask. Set the task title to t
 ✅ Task 2 — <title>
 ...
 
-These tasks are local to this session. To persist them, run `/plan-expert --ticket-id <id>` with an existing ClickUp ticket, or create a new ticket manually and re-run with that ID.
+These tasks are local to this session. To persist them in ClickUp, run `/create-task` to create a ticket, then re-run `/plan-expert --ticket-id <id>`.
 ```
 
 ---

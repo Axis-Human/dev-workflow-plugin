@@ -2,7 +2,7 @@
 name: feature-discovery
 description: Acts as a functional analyst to gather all requirements of a feature through structured questioning. Produces a comprehensive feature specification ready to be turned into a ClickUp ticket, user story, or epic.
 argument-hint: [--description "<initial feature idea>"]
-allowed-tools: AskUserQuestion mcp__clickup__clickup_get_workspace_hierarchy mcp__clickup__clickup_create_task TaskCreate
+allowed-tools: AskUserQuestion mcp__clickup__clickup_get_workspace_hierarchy mcp__clickup__clickup_create_task TaskCreate Skill
 effort: medium
 ---
 
@@ -194,39 +194,35 @@ Omit sections that are genuinely not applicable. Never leave a section empty —
 
 After the spec is confirmed, ask:
 
-> "Would you like me to create this in ClickUp? If yes, should it be a **Task**, **User Story**, or **Epic**?"
+> "Would you like me to create this in ClickUp?"
 
 **If the user says yes:**
 
-1. Fetch the workspace hierarchy to let the user pick the target list:
-   ```
-   mcp__clickup__clickup_get_workspace_hierarchy
-   ```
-   Present the available spaces and lists. Use `AskUserQuestion` to ask: "Which list should I create this in?"
+Hand off to the `create-task` skill to handle classification, template selection, and task creation. Pass the full confirmed feature spec as the input:
 
-2. Create the task with:
-   ```
-   mcp__clickup__clickup_create_task {
-     list_id: "<selected list id>",
-     name: "<Feature: name from spec>",
-     description: "<full spec in markdown>"
-   }
-   ```
+```
+/create-task --input "<full feature spec markdown>" --type US
+```
 
-3. Extract from the response: `id`, `url` (the task's direct ClickUp URL).
+The `create-task` skill will:
+1. Read the `templates/clickup/us_task_template.md` template
+2. Fill it out using the feature spec
+3. Ask the user to confirm before creating
+4. Select the target ClickUp list
+5. Create the task and return the URL
 
-4. Output the result in this exact format so it can be picked up by downstream agents (e.g. `plan-expert`):
+After `create-task` completes, capture `TICKET_ID` and `TICKET_URL` from its output and format them as follows so downstream agents can pick them up:
 
-   ```
-   ✅ ClickUp ticket created
+```
+✅ ClickUp ticket created
 
-   **Name:** <task name>
-   **ID:** <task id>
-   **URL:** <task url>
+**Name:** <task name>
+**ID:** <task id>
+**URL:** <task url>
 
-   > To generate an execution plan for this ticket, run:
-   > `/plan-expert --ticket-id <task id>`
-   ```
+> To generate an execution plan for this ticket, run:
+> `/plan-expert --ticket-id <task id>`
+```
 
 **If the user says no:** present the final spec as a clean markdown block they can copy, and suggest:
 > "You can run `/plan-expert --description \"<feature name>\"` to break this into an execution plan without a ClickUp ticket."
