@@ -95,6 +95,47 @@ if [ -z "$TARGET" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# SSH detection & HTTPS fallback
+#
+#   Claude Code's plugin manager may use SSH URLs (git@github.com:…) internally.
+#   When SSH keys are not configured, plugin install fails. This block detects
+#   that scenario and temporarily configures git to rewrite SSH URLs to HTTPS.
+# ---------------------------------------------------------------------------
+_HTTPS_REWRITE_ADDED=false
+
+trap cleanup_https_fallback EXIT
+
+_ssh_works() {
+  ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new \
+      -T git@github.com 2>&1 | grep -qi "successfully authenticated"
+}
+
+ensure_https_fallback() {
+  if _ssh_works; then
+    return
+  fi
+
+  # Check if the user already has the rewrite configured
+  if git config --global --get url."https://github.com/".insteadOf >/dev/null 2>&1; then
+    echo "SSH not available — HTTPS rewrite already configured, continuing."
+    return
+  fi
+
+  echo "SSH not available — configuring git to use HTTPS for github.com..."
+  git config --global url."https://github.com/".insteadOf "git@github.com:"
+  _HTTPS_REWRITE_ADDED=true
+}
+
+cleanup_https_fallback() {
+  if [ "$_HTTPS_REWRITE_ADDED" = true ]; then
+    echo "Cleaning up temporary HTTPS rewrite..."
+    git config --global --unset url."https://github.com/".insteadOf || true
+    _HTTPS_REWRITE_ADDED=false
+  fi
+}
+
+
+# ---------------------------------------------------------------------------
 # Source-dir resolution
 #
 #   Local invocation (./install.sh)  → use the script's own directory.
@@ -130,11 +171,15 @@ resolve_source_dir() {
 install_claude_code() {
   local settings_file="$HOME/.claude/settings.json"
 
+  ensure_https_fallback
+
   echo "Adding marketplace source..."
   claude plugin marketplace add axis-human/dev-workflow-plugin
 
   echo "Installing axis-human-ai-toolbox plugin..."
   claude plugin install axis-human-ai-toolbox
+
+  cleanup_https_fallback
 
   if [ ! -f "$settings_file" ]; then
     mkdir -p "$(dirname "$settings_file")"
