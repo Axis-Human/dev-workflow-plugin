@@ -12,12 +12,11 @@ _R='\033[0m'      # reset
 print_banner() {
   echo -e "${_P}"
   cat << 'WORDMARK'
- █████╗   ██╗  ██╗   ██╗   ███████╗        ██╗  ██╗   ██╗   ██╗   ███╗   ███╗    █████╗    ███╗   ██╗
-██╔══██╗  ╚██╗██╔╝   ██║   ██╔════╝        ██║  ██║   ██║   ██║   ████╗ ████║   ██╔══██╗   ████╗  ██║
-███████║   ╚███╔╝    ██║   ███████╗        ███████║   ██║   ██║   ██╔████╔██║   ███████║   ██╔██╗ ██║
-██╔══██║   ██╔██╗    ██║   ╚════██║        ██╔══██║   ██║   ██║   ██║╚██╔╝██║   ██╔══██║   ██║╚██╗██║
-██║  ██║  ██╔╝ ██╗   ██║   ███████║        ██║  ██║   ╚██████╔╝   ██║ ╚═╝ ██║   ██║  ██║   ██║ ╚████║
-╚═╝  ╚═╝  ╚═╝  ╚═╝   ╚═╝   ╚══════╝        ╚═╝  ╚═╝    ╚═════╝    ╚═╝     ╚═╝   ╚═╝  ╚═╝   ╚═╝  ╚═══╝
+ █████╗ ██╗  ██╗██╗███████╗     ██╗  ██╗██╗   ██╗███╗   ███╗ █████╗ ███╗   ██╗
+██╔══██╗╚██╗██╔╝██║██╔════╝     ██║  ██║██║   ██║████╗ ████║██╔══██╗████╗  ██║
+███████║ ╚███╔╝ ██║███████╗     ███████║██║   ██║██╔████╔██║███████║██╔██╗ ██║
+██╔══██║ ██╔██╗ ██║╚════██║     ██╔══██║██║   ██║██║╚██╔╝██║██╔══██║██║╚██╗██║
+██║  ██║██╔╝ ██╗██║███████║     ██║  ██║╚██████╔╝██║ ╚═╝ ██║██║  ██║██║ ╚████║
 WORDMARK
   echo -e "${_D}"
   echo   "                      dev-workflow-plugin  ·  installer"
@@ -29,10 +28,11 @@ print_usage() {
 Usage: install.sh [TARGET]
 
 Targets:
-  --claude     Install for Claude Code.
-  --opencode   Install for OpenCode (skills + converted agents).
-  --all        Install for both Claude Code and OpenCode.
-  -h, --help   Show this help.
+  --claude           Install for Claude Code.
+  --opencode         Install for OpenCode (skills + converted agents).
+  --all              Install for both Claude Code and OpenCode.
+  --clickup-desktop  Add ClickUp MCP server to Claude Desktop config.
+  -h, --help         Show this help.
 
 If no target is given, an interactive menu is shown.
 USAGE
@@ -44,11 +44,12 @@ USAGE
 TARGET=""
 if [ "$#" -gt 0 ]; then
   case "$1" in
-    --claude)   TARGET="claude" ;;
-    --opencode) TARGET="opencode" ;;
-    --all)      TARGET="all" ;;
-    -h|--help)  print_banner; print_usage; exit 0 ;;
-    *)          echo "Unknown argument: $1" >&2; print_usage; exit 1 ;;
+    --claude)           TARGET="claude" ;;
+    --opencode)         TARGET="opencode" ;;
+    --all)              TARGET="all" ;;
+    --clickup-desktop)  TARGET="clickup-desktop" ;;
+    -h|--help)          print_banner; print_usage; exit 0 ;;
+    *)                  echo "Unknown argument: $1" >&2; print_usage; exit 1 ;;
   esac
 fi
 
@@ -64,7 +65,8 @@ prompt_choice() {
     echo "  1) Install for Claude Code"
     echo "  2) Install for OpenCode"
     echo "  3) Install for both"
-    echo "  4) Exit"
+    echo "  4) Add ClickUp MCP to Claude Desktop"
+    echo "  5) Exit"
     printf "> "
 
     if [ -t 0 ]; then
@@ -75,16 +77,17 @@ prompt_choice() {
       choice="$( { read -r line < /dev/tty && printf '%s' "$line"; } 2>/dev/null )" || true
       if [ -z "$choice" ] && ! { : < /dev/tty; } 2>/dev/null; then
         echo ""
-        echo "No TTY available. Re-run with --claude, --opencode, or --all." >&2
+        echo "No TTY available. Re-run with --claude, --opencode, --all, or --clickup-desktop." >&2
         exit 1
       fi
     fi
 
     case "$choice" in
-      1) TARGET="claude";   return ;;
-      2) TARGET="opencode"; return ;;
-      3) TARGET="all";      return ;;
-      4) echo "Aborted."; exit 0 ;;
+      1) TARGET="claude";           return ;;
+      2) TARGET="opencode";         return ;;
+      3) TARGET="all";              return ;;
+      4) TARGET="clickup-desktop";  return ;;
+      5) echo "Aborted."; exit 0 ;;
       *) echo "Invalid choice: $choice"; echo "" ;;
     esac
   done
@@ -220,6 +223,53 @@ JS
   echo "Claude Code install complete."
   echo "  Plugin : axis-human-ai-toolbox"
   echo "  Hooks  : UserPromptSubmit, SubagentStart"
+}
+
+# ---------------------------------------------------------------------------
+# ClickUp MCP → Claude Desktop
+# ---------------------------------------------------------------------------
+install_clickup_desktop_mcp() {
+  local desktop_config=""
+
+  case "$(uname -s)" in
+    Darwin) desktop_config="$HOME/Library/Application Support/Claude/claude_desktop_config.json" ;;
+    Linux)  desktop_config="$HOME/.config/Claude/claude_desktop_config.json" ;;
+    *)
+      echo "  Unsupported OS for Claude Desktop MCP — skipping."
+      return
+      ;;
+  esac
+
+  if [ ! -f "$desktop_config" ]; then
+    echo "  Claude Desktop config not found at: $desktop_config"
+    echo "  Is Claude Desktop installed? Skipping."
+    return
+  fi
+
+  echo "Configuring ClickUp MCP in Claude Desktop..."
+
+  node - "$desktop_config" <<'JS'
+const fs = require('fs');
+const file = process.argv[2];
+
+let config = {};
+try { config = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (_) {}
+
+if (!config.mcpServers) config.mcpServers = {};
+
+if (config.mcpServers.clickup) {
+  console.log('  ClickUp MCP already present — skipping.');
+  process.exit(0);
+}
+
+config.mcpServers.clickup = {
+  command: "npx",
+  args: ["-y", "mcp-remote", "https://mcp.clickup.com/mcp"]
+};
+
+fs.writeFileSync(file, JSON.stringify(config, null, 2) + '\n');
+console.log('  ClickUp MCP added to Claude Desktop successfully.');
+JS
 }
 
 # ---------------------------------------------------------------------------
@@ -414,5 +464,8 @@ case "$TARGET" in
     install_claude_code
     echo ""
     install_opencode
+    ;;
+  clickup-desktop)
+    install_clickup_desktop_mcp
     ;;
 esac

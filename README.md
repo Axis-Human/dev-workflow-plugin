@@ -68,6 +68,22 @@ curl -fsSL https://raw.githubusercontent.com/Axis-Human/dev-workflow-plugin/main
 
 This installs the plugin and configures the required hooks in `~/.claude/settings.json` automatically.
 
+To target a specific install (non-interactive):
+
+```bash
+# Claude Code only
+curl -fsSL https://raw.githubusercontent.com/Axis-Human/dev-workflow-plugin/main/install.sh | bash -s -- --claude
+
+# OpenCode only
+curl -fsSL https://raw.githubusercontent.com/Axis-Human/dev-workflow-plugin/main/install.sh | bash -s -- --opencode
+
+# Both
+curl -fsSL https://raw.githubusercontent.com/Axis-Human/dev-workflow-plugin/main/install.sh | bash -s -- --all
+
+# ClickUp MCP for Claude Desktop only
+curl -fsSL https://raw.githubusercontent.com/Axis-Human/dev-workflow-plugin/main/install.sh | bash -s -- --clickup-desktop
+```
+
 ---
 
 ### Option 2 — Install directly via Claude Code (no cloning required)
