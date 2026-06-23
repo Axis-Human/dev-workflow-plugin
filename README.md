@@ -1,6 +1,8 @@
-# Dev Workflow — Claude Code Plugin
+# Dev Workflow — AI Coding Agent Plugin
 
-A Claude Code plugin with a curated set of skills and agents for software teams. Covers accessibility auditing, code review, project initialization, design system documentation, and end-to-end feature planning workflows backed by ClickUp.
+A curated set of skills and agents for software teams. Covers accessibility auditing, code review, project initialization, design system documentation, and end-to-end feature planning workflows backed by ClickUp.
+
+Works with **Claude Code**, **OpenCode**, and the **Codex CLI** — the `install.sh` script adapts the skills and orchestrator workflow to each tool's native format.
 
 ---
 
@@ -129,6 +131,29 @@ cd ~/tools/axis-human-ai-toolbox && git pull
 
 ---
 
+### Option 4 — OpenCode & Codex CLI
+
+The `install.sh` script installs to other agent tools too. Run it with a target flag (or no flag for an interactive menu):
+
+```bash
+./install.sh --claude     # Claude Code (plugin + hooks)
+./install.sh --opencode   # OpenCode  (skills symlinked + agents converted)
+./install.sh --codex      # Codex CLI (skills symlinked + orchestrator workflow)
+./install.sh --all        # all three
+```
+
+What each target installs:
+
+| Tool | Skills | Orchestration |
+|------|--------|---------------|
+| **Claude Code** | via plugin marketplace | `agents/` + `UserPromptSubmit` hook |
+| **OpenCode** | symlinked to `~/.config/opencode/skills` | `agents/` converted to OpenCode frontmatter |
+| **Codex CLI** | symlinked to `~/.codex/skills` | intent→skill routing inlined into `~/.codex/AGENTS.md` |
+
+> **Codex note:** Codex has no sub-agent delegation, so the orchestrator is shipped as a routing table (`codex/dev-workflow.md`) inlined into your global `~/.codex/AGENTS.md` between managed markers. Codex does **not** expand `@file` imports in `AGENTS.md`, so the content is inlined rather than referenced. Skills auto-update on `git pull`; re-run `./install.sh --codex` to refresh the workflow block.
+
+---
+
 ### Verify the setup
 
 Open Claude Code in any project and run:
@@ -223,6 +248,8 @@ Agents are invoked by describing the task naturally — Claude Code selects the 
 axis-human-ai-toolbox/
 ├── .claude-plugin/
 │   └── plugin.json                      # Plugin metadata
+├── codex/
+│   └── dev-workflow.md                  # Codex orchestrator workflow (inlined into AGENTS.md)
 ├── agents/
 │   ├── orchestrator-agent.md            # Default entry point — routes all intents
 │   ├── planning-features-agent.md       # Sub-agent: discovery + planning pipeline

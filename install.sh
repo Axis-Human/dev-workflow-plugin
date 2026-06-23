@@ -31,7 +31,8 @@ Usage: install.sh [TARGET]
 Targets:
   --claude     Install for Claude Code.
   --opencode   Install for OpenCode (skills + converted agents).
-  --all        Install for both Claude Code and OpenCode.
+  --codex      Install for Codex CLI (skills + orchestrator workflow).
+  --all        Install for Claude Code, OpenCode, and Codex.
   -h, --help   Show this help.
 
 If no target is given, an interactive menu is shown.
@@ -46,6 +47,7 @@ if [ "$#" -gt 0 ]; then
   case "$1" in
     --claude)   TARGET="claude" ;;
     --opencode) TARGET="opencode" ;;
+    --codex)    TARGET="codex" ;;
     --all)      TARGET="all" ;;
     -h|--help)  print_banner; print_usage; exit 0 ;;
     *)          echo "Unknown argument: $1" >&2; print_usage; exit 1 ;;
@@ -63,8 +65,9 @@ prompt_choice() {
     echo "Select an option:"
     echo "  1) Install for Claude Code"
     echo "  2) Install for OpenCode"
-    echo "  3) Install for both"
-    echo "  4) Exit"
+    echo "  3) Install for Codex CLI"
+    echo "  4) Install for all"
+    echo "  5) Exit"
     printf "> "
 
     if [ -t 0 ]; then
@@ -83,8 +86,9 @@ prompt_choice() {
     case "$choice" in
       1) TARGET="claude";   return ;;
       2) TARGET="opencode"; return ;;
-      3) TARGET="all";      return ;;
-      4) echo "Aborted."; exit 0 ;;
+      3) TARGET="codex";    return ;;
+      4) TARGET="all";      return ;;
+      5) echo "Aborted."; exit 0 ;;
       *) echo "Invalid choice: $choice"; echo "" ;;
     esac
   done
@@ -223,12 +227,12 @@ JS
 }
 
 # ---------------------------------------------------------------------------
-# OpenCode — skills (symlinked from the local clone)
+# Shared — symlink every skill/ subdir into a target directory
 # ---------------------------------------------------------------------------
-install_opencode_skills() {
+link_skills() {
+  local skills_dst="$1"
   resolve_source_dir
   local skills_src="$SOURCE_DIR/skills"
-  local skills_dst="$HOME/.config/opencode/skills"
 
   if [ ! -d "$skills_src" ]; then
     echo "Error: no skills/ directory in $SOURCE_DIR" >&2
@@ -262,6 +266,13 @@ install_opencode_skills() {
   if [ "$skipped" -gt 0 ]; then
     echo "  Skipped : $skipped"
   fi
+}
+
+# ---------------------------------------------------------------------------
+# OpenCode — skills (symlinked from the local clone)
+# ---------------------------------------------------------------------------
+install_opencode_skills() {
+  link_skills "$HOME/.config/opencode/skills"
 }
 
 # ---------------------------------------------------------------------------
@@ -401,6 +412,76 @@ install_opencode() {
 }
 
 # ---------------------------------------------------------------------------
+# Codex CLI — skills (symlinked) + orchestrator workflow (AGENTS.md import)
+#
+#   Codex has no sub-agent delegation, so the agents/ tree does not map. Instead
+#   the orchestrator's intent→skill routing is shipped as codex/dev-workflow.md
+#   and imported from the global ~/.codex/AGENTS.md so the single Codex agent
+#   follows the same workflow. Skills are symlinked — identical SKILL.md format.
+# ---------------------------------------------------------------------------
+install_codex_skills() {
+  link_skills "$HOME/.codex/skills"
+}
+
+install_codex_workflow() {
+  resolve_source_dir
+  local workflow_src="$SOURCE_DIR/codex/dev-workflow.md"
+  local codex_home="$HOME/.codex"
+  local agents_file="$codex_home/AGENTS.md"
+
+  if [ ! -f "$workflow_src" ]; then
+    echo "Error: no codex/dev-workflow.md in $SOURCE_DIR" >&2
+    exit 1
+  fi
+
+  mkdir -p "$codex_home"
+  echo "Injecting workflow into $agents_file..."
+
+  # Codex does NOT expand @file imports in AGENTS.md — it only merges files by
+  # directory proximity. So the workflow is inlined directly into the global
+  # AGENTS.md between managed markers. Re-running replaces the block in place.
+  node - "$workflow_src" "$agents_file" <<'JS'
+const fs = require('fs');
+const [, , src, dst] = process.argv;
+
+const BEGIN = '<!-- BEGIN dev-workflow-plugin (managed by install.sh — do not edit) -->';
+const END   = '<!-- END dev-workflow-plugin -->';
+
+const content = fs.readFileSync(src, 'utf8').trim();
+const block = `${BEGIN}\n${content}\n${END}`;
+
+let existing = fs.existsSync(dst) ? fs.readFileSync(dst, 'utf8') : '';
+
+const b = existing.indexOf(BEGIN);
+const e = existing.indexOf(END);
+
+if (b !== -1 && e !== -1 && e > b) {
+  const before = existing.slice(0, b);
+  const after  = existing.slice(e + END.length);
+  existing = `${before}${block}${after}`;
+  console.log('  replaced managed block');
+} else {
+  const sep = existing && !existing.endsWith('\n') ? '\n\n' : (existing ? '\n' : '');
+  existing = `${existing}${sep}${block}\n`;
+  console.log(existing.trim() === block ? '  created AGENTS.md with workflow' : '  appended workflow block');
+}
+
+fs.writeFileSync(dst, existing);
+JS
+}
+
+install_codex() {
+  install_codex_skills
+  echo ""
+  install_codex_workflow
+  echo ""
+  echo "Codex CLI install complete."
+  echo "  Skills   : $HOME/.codex/skills    (symlinks — auto-update via git pull)"
+  echo "  Workflow : $HOME/.codex/AGENTS.md (managed block — re-run install to update)"
+  echo "  Source   : $SOURCE_DIR"
+}
+
+# ---------------------------------------------------------------------------
 # Dispatch
 # ---------------------------------------------------------------------------
 case "$TARGET" in
@@ -410,9 +491,14 @@ case "$TARGET" in
   opencode)
     install_opencode
     ;;
+  codex)
+    install_codex
+    ;;
   all)
     install_claude_code
     echo ""
     install_opencode
+    echo ""
+    install_codex
     ;;
 esac
