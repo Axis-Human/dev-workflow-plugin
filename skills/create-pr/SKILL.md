@@ -1,7 +1,7 @@
 ---
 name: create-pr
 description: Creates a GitHub pull request (always as Draft) with a fully auto-populated standardized template. Infers the base branch, derives the description from the diff and commits, detects shared code impact, tags stakeholders from CODEOWNERS, and builds a concrete test plan from the changes. Uses gh CLI as the primary creation method with GitHub MCP as fallback. Designed to run without human input when called by an agent, or with a confirmation step when invoked directly.
-argument-hint: [--base <branch>] [--ticket-id <id>] [--auto]
+argument-hint: '[--base <branch>] [--ticket-id <id>] [--auto]'
 allowed-tools: Bash AskUserQuestion mcp__github__create_pull_request mcp__github__list_branches
 effort: low
 ---
