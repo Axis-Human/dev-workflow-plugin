@@ -9,6 +9,7 @@ model: claude-opus-4-6
 color: yellow
 effort: high
 tools:
+  - Agent
   - TaskCreate
   - TaskUpdate
   - AskUserQuestion
@@ -54,14 +55,16 @@ Every invocation from the orchestrator includes:
 
 ```yaml
 1_discovery: |
-  Delegate to `feature-discovery-agent` via TaskCreate.
+  Spawn `feature-discovery-agent` via the Agent tool, with
+  subagent_type: "axis-human-ai-toolbox:feature-discovery-agent".
   Input: { user description } from Orchestrator payload.
 
 2_await_spec: |
   Capture FEATURE_SPEC, TICKET_ID, and TICKET_URL from the discovery agent's return.
 
 3_planning: |
-  Delegate to `plan-expert-agent` via TaskCreate.
+  Spawn `plan-expert-agent` via the Agent tool, with
+  subagent_type: "axis-human-ai-toolbox:plan-expert-agent".
   Input: { FEATURE_SPEC, TICKET_ID } from Phase 1 + orchestrator payload.
 
 4_summary: |
@@ -105,5 +108,5 @@ cannot:
 ---
 
 ```yaml
-version: 2.0.0
+version: 2.1.0
 ```
