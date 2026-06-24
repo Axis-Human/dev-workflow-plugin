@@ -9,6 +9,7 @@ model: claude-opus-4-6
 color: teal
 effort: high
 tools:
+  - Skill
   - Glob
   - Read
   - Grep
@@ -120,5 +121,5 @@ cannot:
 ---
 
 ```yaml
-version: 2.0.0
+version: 2.1.0
 ```

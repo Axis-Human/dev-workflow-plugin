@@ -12,6 +12,8 @@ model: claude-opus-4-6
 color: purple
 effort: high
 tools:
+  - Agent
+  - Skill
   - TaskCreate
   - TaskUpdate
   - AskUserQuestion
@@ -20,6 +22,10 @@ tools:
   - mcp__clickup__clickup_get_workspace_hierarchy
   - mcp__clickup__clickup_create_task
   - mcp__clickup__clickup_get_task
+skills:
+  - create-pr
+  - a11y-auditor
+  - code-review
 ---
 
 # Orchestrator Agent
@@ -71,8 +77,13 @@ This is the **default agent**. It activates on every user message, including:
   For code changes: git checkout -b {task-id}-{slug} before delegating.
 
 4_delegation: |
-  Spawn the first sub-agent in the routing sequence (see Routing Table).
-  Pass the full delegation payload:
+  Spawn the first sub-agent in the routing sequence (see Routing Table) using the
+  Agent tool. Sub-agents are spawned via the Agent tool — NOT TaskCreate (that only
+  tracks todos). Every agent name MUST be prefixed with `axis-human-ai-toolbox:` as
+  the subagent_type, e.g. spawn `plan-expert-agent` with
+  subagent_type: "axis-human-ai-toolbox:plan-expert-agent".
+  Skills (a11y-auditor, code-review, create-pr) are invoked with the Skill tool, not the Agent tool.
+  Pass the full delegation payload in the prompt:
     - intent
     - FEATURE_SPEC (if any)
     - TICKET_ID (if any)
@@ -104,13 +115,13 @@ new_feature:
 
 quick_task:
   when: Well-defined task with no scope ambiguity. ClickUp ticket ID often provided.
-  sequence: plan-expert-agent → qa-agent → implement-task-agent → reviewer-agent → create-pr
+  sequence: plan-expert-agent → quality-assurance-agent → implement-task-agent → reviewer-agent → create-pr
   first_hop: plan-expert-agent
 
 implementation:
   when: Plan already exists; user wants code written immediately.
-  sequence: qa-agent → implement-task-agent → reviewer-agent → create-pr
-  first_hop: qa-agent
+  sequence: quality-assurance-agent → implement-task-agent → reviewer-agent → create-pr
+  first_hop: quality-assurance-agent
 
 refactor:
   when: Improving existing code structure without changing behavior.
@@ -164,5 +175,5 @@ cannot:
 ---
 
 ```yaml
-version: 2.2.0
+version: 2.3.0
 ```
