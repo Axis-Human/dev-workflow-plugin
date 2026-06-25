@@ -46,6 +46,16 @@ Agents follow an **orchestrator → sub-agent** architecture. The `orchestrator-
 
 > **How to use:** Just describe what you want in natural language. The orchestrator routes automatically. Use `/` skills for direct, one-off invocations when you know exactly which step to run.
 
+### Standalone agents (Playwright test automation)
+
+These three agents are **not** routed through the orchestrator. They form a self-contained end-to-end browser-testing pipeline and are invoked directly via `/agents` (or by naming them). They run against a live web app through the `playwright-test` MCP server.
+
+| Agent | Role |
+|---|---|
+| **playwright-test-planner** | Explores a running web app in a real browser, maps user flows, and writes a comprehensive Markdown test plan (happy paths, edge cases, negative scenarios). |
+| **playwright-test-generator** | Takes a test plan and generates Playwright `.spec.ts` files — executing each step live in the browser to produce robust, best-practice selectors and assertions. |
+| **playwright-test-healer** | Runs the generated suite, debugs failing tests, fixes selectors/assertions/timing, and re-runs until green. Marks genuinely stuck-but-correct tests as `test.fixme()`. |
+
 ---
 
 ## Requirements
@@ -215,6 +225,42 @@ Agents are invoked by describing the task naturally — Claude Code selects the 
 "Work on this task and open a PR when done"
 ```
 
+### Playwright test automation workflow
+
+The three Playwright agents chain into a **plan → generate → heal** pipeline that builds and maintains an end-to-end test suite for a live web app — no manual test writing required.
+
+```
+playwright-test-planner  →  playwright-test-generator  →  playwright-test-healer
+   (explore + plan)            (write .spec.ts files)        (run + debug until green)
+```
+
+**Prerequisites**
+
+- Playwright installed in the target project (`npm install -D @playwright/test && npx playwright install`).
+- The `playwright-test` MCP server (declared in `.mcp.json`). It launches via `npx playwright run-test-mcp-server` and works on macOS, Linux, and Windows out of the box.
+  > **Windows note:** if `npx` isn't resolved when the server spawns, wrap it through `cmd`:
+  > ```json
+  > "playwright-test": { "command": "cmd", "args": ["/c", "npx", "playwright", "run-test-mcp-server"] }
+  > ```
+- A running instance of the app under test (the planner navigates to it in a browser).
+
+**How to run it**
+
+Invoke each agent in order via `/agents`, or just describe the step in natural language:
+
+```
+# 1. Explore the app and produce a test plan
+"Use playwright-test-planner to create a test plan for http://localhost:3000"
+
+# 2. Turn the plan into Playwright spec files
+"Use playwright-test-generator to generate tests from the saved plan"
+
+# 3. Run the suite and fix any failures
+"Use playwright-test-healer to run the tests and fix what's broken"
+```
+
+Each step hands off to the next: the planner saves a Markdown plan, the generator reads that plan and writes one `.spec.ts` per scenario, and the healer runs the suite and repairs failing tests (marking any it can't fix as `test.fixme()` with an explanatory comment). You can also run the healer on its own any time tests start failing after app changes.
+
 ---
 
 ## Project structure
@@ -230,6 +276,9 @@ axis-human-ai-toolbox/
 │   ├── plan-expert-agent.md             # Sub-agent: technical decomposition
 │   ├── implement-task-agent.md          # Sub-agent: code + PR delivery
 │   ├── design-system-setup-agent.md     # Sub-agent: design system pipeline
+│   ├── playwright-test-planner.md       # Standalone: explore app → test plan
+│   ├── playwright-test-generator.md     # Standalone: test plan → .spec.ts files
+│   ├── playwright-test-healer.md        # Standalone: run + fix failing tests
 ├── skills/
 │   ├── a11y-auditor/
 │   │   └── SKILL.md
@@ -328,5 +377,6 @@ axis-human-ai-toolbox/
 |---|---|---|
 | `github` | HTTP | GitHub repository operations via the Copilot MCP endpoint |
 | `clickup` | HTTP | ClickUp task management — read tickets, create tasks and subtasks |
+| `playwright-test` | stdio | Browser automation for the Playwright test agents — explore apps, generate and run `.spec.ts` tests |
 
 The MCP configuration is automatically picked up by Claude Code as a project-scoped config. Tokens are read from environment variables — never committed to the repo.
