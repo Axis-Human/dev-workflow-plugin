@@ -26,7 +26,7 @@ Scan the project root to detect the tech stack and structure. Use Glob and Read 
 - **CI/CD:** `.github/workflows/`
 - **Dev commands:** read `package.json` scripts section, `Makefile`, or `composer.json` scripts
 
-Read these files in full if they exist:
+Read these files if they exist:
 - `package.json`
 - `composer.json`
 - `README.md` (first 50 lines — to avoid overwriting intentional content)
@@ -39,7 +39,7 @@ Read these files in full if they exist:
 After scanning, ask only for information that could not be inferred from the codebase. Use `AskUserQuestion` with a single call covering all needed fields at once (1–4 questions max).
 
 Always ask:
-1. **Project name** — if not clear from `package.json`, `composer.json`, or folder name
+1. **Project name + repository clone URL** — if not clear from `package.json`, `composer.json`, or folder name
 2. **Short project description** — one sentence explaining what the project does
 3. **Credentials/config location** — where developers get environment variable values (e.g. Passbolt, 1Password, a shared drive link — never hardcode actual values)
 4. **Contact info** — Project Manager name + email, Tech Lead name + email
@@ -50,8 +50,9 @@ Only ask for stack details if they genuinely could not be detected.
 
 ## Step 3 — Generate README.md
 
-Write `README.md` at the project root using the template below. Fill every section with real detected values. Use placeholder text only where data is unavailable and mark it with `<!-- TODO: fill in -->`.
+If `README.md` already exists and contains non-placeholder content, ask for confirmation before overwriting and preserve any clearly intentional hand-written sections.
 
+Write `README.md` at the project root using the template below. Fill every section with real detected values. Use placeholder text only where data is unavailable and mark it with `<!-- TODO: fill in -->`.
 Rules:
 - Use the project's actual logo if `public/` or `assets/` contains an `.svg` or image with "logo" in the name; otherwise omit the `<img>` tag.
 - List only the stack components actually detected — do not invent extras.
@@ -63,7 +64,7 @@ Rules:
 
 ### README.md template
 
-```markdown
+````markdown
 <img src="./public/<logo-file>" alt="icon">
 <h3>
  <project-name> 👨🏼‍💻 TOTS
@@ -78,7 +79,7 @@ Rules:
         Getting Started
     </a>
      ✦ 
-    <a href="#️-useful-commands">
+   <a href="#-useful-commands">
         Commands
     </a>
      ✦ 
@@ -205,7 +206,7 @@ For support or questions, please contact:
 Project Manager: <a href="mailto:<pm-email>"><pm-name></a>
 
 Tech Lead: <a href="mailto:<tl-email>"><tl-name></a>
-```
+````
 
 ---
 
