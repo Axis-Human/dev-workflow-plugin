@@ -65,6 +65,7 @@ Rules:
 ### README.md template
 
 ````markdown
+<div align="center">
 <img src="./public/<logo-file>" alt="icon">
 <h3>
  <project-name> 👨🏼‍💻 TOTS
@@ -74,26 +75,27 @@ Rules:
    <a href="#-stack">
         Stack
     </a>
-     ✦ 
+    <span>&nbsp;✦&nbsp;</span>
     <a href="#-getting-started">
         Getting Started
     </a>
-     ✦ 
+    <span>&nbsp;✦&nbsp;</span>
    <a href="#-useful-commands">
         Commands
     </a>
-     ✦ 
+    <span>&nbsp;✦&nbsp;</span>
     <a href="#-contribution">
         How to contribute
     </a>
-       ✦ 
+    <span>&nbsp;✦&nbsp;</span>
     <a href="#-deployment">
         How to do a deployment
     </a>
-       ✦ 
+    <span>&nbsp;✦&nbsp;</span>
     <a href="#-contact">
         Contact
     </a>
+</div>
 
 
 ## 🛠️ Stack
