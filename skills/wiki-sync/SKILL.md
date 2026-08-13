@@ -32,7 +32,8 @@ Parse `wiki/sync-config.md` to extract:
 - `IMPACT_PATTERNS`: per-repo list of file glob patterns with wiki impact
 - `NO_IMPACT_PATTERNS`: list of patterns to ignore
 
-If `REPOS` is empty or "(ninguno)", inform the user:
+If `REPOS` is empty (no data rows in the Repositories table, or the table body
+contains only a placeholder like `"(none)"`), inform the user:
 > "No source repos configured in wiki/sync-config.md. Nothing to sync."
 Then stop.
 
@@ -171,32 +172,36 @@ Overwrite `wiki/sync.md` with the new hashes and today's date:
 Create `wiki/logs/YYYY-MM-DD.md` (today's date).
 If the file already exists (multiple syncs today), append to it.
 
+Write all section headings, labels, and descriptions in the language
+defined in `wiki-conventions.md` (loaded in Step 0). The structure below
+is a template — translate every heading and label to match that language:
+
 ```markdown
 # Sync — YYYY-MM-DD
 
-## Resumen
+## Summary
 
 [For each repo:]
 - [repo.name]: `<old-hash>` → `<new-hash>` (<N> commits)
 
-## Cambios en la wiki
+## Wiki changes
 
-### Páginas actualizadas
-- `ruta/pagina.md` — descripción breve de qué cambió
+### Pages updated
+- `path/page.md` — brief description of what changed
 
-### Páginas creadas
-- `ruta/pagina.md` — motivo
+### Pages created
+- `path/page.md` — reason
 
-### Páginas eliminadas
-- `ruta/pagina.md` — motivo
+### Pages deleted
+- `path/page.md` — reason
 
-## Archivos del diff con impacto wiki (<N> de <total>)
+## Diff files with wiki impact (<N> of <total>)
 
-| Archivo | Repo | Estado | Acción tomada |
-|---------|------|--------|---------------|
-| `path/to/file` | repo-name | M | Actualizado `wiki/pagina.md` |
+| File | Repo | Status | Action taken |
+|------|------|--------|--------------|
+| `path/to/file` | repo-name | M | Updated `wiki/page.md` |
 
-## Archivos sin impacto wiki (<N> ignorados)
+## Diff files without wiki impact (<N> ignored)
 
 `tests/SomeTest.php`, `composer.lock`, ...
 ```
