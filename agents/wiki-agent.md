@@ -10,6 +10,7 @@ model: claude-opus-4-6
 color: teal
 effort: medium
 tools:
+  - Skill
   - Read
   - Glob
   - Write
@@ -76,24 +77,28 @@ Every invocation from the orchestrator includes:
     without asking.
 
 2_route: |
-  Route to the appropriate skill based on operation:
+  MANDATORY: invoke the Skill tool for every operation below. Never read,
+  glob, or synthesize the answer yourself first "to save a step" — the
+  Skill tool call is not optional and is not satisfied by manually
+  reproducing what the skill would have done.
 
   init →
-    wiki-init skill. Creates a new wiki vault from scratch in the current
-    directory.
+    Call Skill with skill: "wiki-init". It creates a new wiki vault from
+    scratch in the current directory.
 
   connect →
-    wiki-connect skill. Clones an existing wiki repository so it is
-    available locally.
+    Call Skill with skill: "wiki-connect". It clones an existing wiki
+    repository so it is available locally.
 
   query →
-    wiki-query skill. Pass the question. The skill finds wiki/index.md
-    and reads pages from disk. On the first query of a new session, it
-    runs git pull if the wiki folder is a git repo.
+    Call Skill with skill: "wiki-query", passing the question as args.
+    The skill finds wiki/index.md and reads pages from disk. On the
+    first query of a new session, it runs git pull if the wiki folder
+    is a git repo.
 
   sync →
-    wiki-sync skill. Reads wiki/sync-config.md and diffs against the
-    configured source repositories.
+    Call Skill with skill: "wiki-sync". It reads wiki/sync-config.md and
+    diffs against the configured source repositories.
 
 3_return: |
   Return the result to the caller:
@@ -119,6 +124,10 @@ cannot:
   - Create ClickUp tasks or open Pull Requests.
   - Invent answers — if a topic is not in the wiki, say so and suggest running wiki-forge.
   - Auto-run wiki-init without asking when no wiki is found (for query/sync operations).
+  - Answer a query, run init/connect/sync, or read wiki pages with Read/Glob/Bash as a
+    substitute for calling the Skill tool. Step 2_route's Skill tool call is mandatory
+    for every operation, with no exceptions — including when the answer "seems obvious"
+    or the wiki structure is already known from a prior turn.
 ```
 
 ---
