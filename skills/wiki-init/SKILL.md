@@ -67,7 +67,7 @@ Store answers as `VAULT_NAME`, `LANGUAGE`, `PROJECT_TYPE`, `REPO_COUNT`.
 
 **If there are repos:** use `AskUserQuestion` with 2 questions:
 
-- **"List each repository, one per line. Format: `name | relative-path | stack | base-branch`. The `base-branch` field is optional — omit it (or leave it empty) to default to `main`. Example: `api | ../my-api | Laravel 11 | main` or `legacy | ../legacy-api | Laravel 8 | master`"**
+- **"List each repository, one per line. Format: `name | relative-path | base-branch`. The `base-branch` field is optional — omit it (or leave it empty) to default to `main`. Example: `api | ../my-api | main` or `legacy | ../legacy-api | master`"**
   Header: "Repositories"
   User types in "Other" with as many lines as needed.
 
@@ -78,12 +78,54 @@ Store answers as `VAULT_NAME`, `LANGUAGE`, `PROJECT_TYPE`, `REPO_COUNT`.
   - "Yes — I already put them in raw/"
   - "No — start with an empty vault"
 
-Parse the repo answer line by line. For each line `name | path | stack` or
-`name | path | stack | base-branch`, create an object
-`{ name, path, stack, base_branch }`. If `base-branch` is missing or empty,
+Parse the repo answer line by line. For each line `name | path` or
+`name | path | base-branch`, create an object
+`{ name, path, base_branch }`. If `base-branch` is missing or empty,
 set `base_branch` to `main`. Store as `REPOS`.
 
 Store the sources answer as `HAS_SOURCES`.
+
+---
+
+## Step 3.5 — Infer stack and derive remote URL
+
+For each repo in `REPOS`, derive two fields automatically:
+
+### Stack inference
+
+Inspect files at `[repo.path]` to classify the stack. Check in this order
+(first match wins):
+
+| Marker files | Stack |
+|-------------|-------|
+| `composer.json` **and** `artisan` | Laravel / PHP |
+| `package.json` **and** `angular.json` | Angular / TypeScript |
+| `package.json` (without `angular.json`) | Node / Express / NestJS |
+| `manage.py` | Django / Python |
+| `Gemfile` | Rails / Ruby |
+| `go.mod` | Go |
+| *(none of the above)* | Unknown |
+
+Store the result as `repo.stack`.
+
+### Remote URL derivation
+
+Run:
+
+```bash
+git -C [repo.path] remote get-url origin
+```
+
+If the command succeeds, store the output as `repo.remote_url`.
+
+If the command fails (the path is not a git repo, or has no `origin` remote),
+use `AskUserQuestion` to ask for the URL manually:
+
+- Question: "Could not detect the remote URL for **[repo.name]** (at `[repo.path]`). What is the Git remote URL for this repository? (e.g. https://github.com/org/repo or git@github.com:org/repo.git)"
+- Header: "Remote URL for [repo.name]"
+- Let the user type in "Other"
+
+Store the answer as `repo.remote_url`.
 
 ---
 
@@ -277,10 +319,10 @@ Edit this file to add, remove, or modify source repos.
 
 ## Repositories
 
-| Name | Relative path | Stack | Base branch |
-|------|---------------|-------|-------------|
+| Name | Remote URL | Stack | Base branch |
+|------|------------|-------|-------------|
 [One row per repo in REPOS]
-| [name] | [path] | [stack] | [base_branch] |
+| [name] | [remote_url] | [stack] | [base_branch] |
 
 `Base branch` is the remote branch `/wiki-sync` diffs against for that repo
 (e.g. `main`, `master`). Defaults to `main` if left empty.
@@ -506,6 +548,73 @@ Do not grep the codebase for facts that may already be in the wiki.
 
 ---
 
+### 5.10 — Bare clone cache
+
+For each repo in `REPOS`, ensure a bare clone exists in the wiki for future
+syncs (so `/wiki-sync` can run without needing the original source repos
+on disk):
+
+1. Compute `CACHE_PATH = wiki/.sync-cache/[repo.name]`.
+
+2. Check if `CACHE_PATH/HEAD` exists (marker of a valid bare repo).
+   If it already exists, skip to the next repo.
+
+3. If it does not exist, clone:
+
+   ```bash
+   git clone --bare [repo.remote_url] wiki/.sync-cache/[repo.name]
+   ```
+
+   After the clone succeeds, configure the fetch refspec so that
+   `origin/[branch]` references work (bare clones default to mapping
+   remote heads directly into `refs/heads/`):
+
+   ```bash
+   git -C wiki/.sync-cache/[repo.name] config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+   git -C wiki/.sync-cache/[repo.name] fetch origin
+   ```
+
+4. If the clone fails, classify the error from stderr:
+
+   **Authentication problem** — stderr contains patterns like "could not read
+   Username", "Authentication failed", "Permission denied", "403", or a
+   username/password prompt failure:
+
+   Tell the user:
+
+   > The clone failed because git could not authenticate. This usually means
+   > the credential flow needs an interactive prompt that cannot run from
+   > this automated session.
+   >
+   > Please run this command yourself in your own terminal:
+   > ```
+   > git clone --bare [repo.remote_url] wiki/.sync-cache/[repo.name]
+   > ```
+   > Your system's native credential dialog (Git Credential Manager, browser
+   > OAuth flow, SSH passphrase prompt) will appear and let you authenticate.
+   > Once it finishes, let me know and I will continue from here.
+
+   After the user confirms, verify the clone landed by checking that
+   `CACHE_PATH/HEAD` exists. If it does, configure the fetch refspec as
+   described in step 3 above, then continue.
+
+   **Repository not found** — stderr contains patterns like "repository not
+   found", "not found", "does not exist":
+
+   Tell the user the URL appears incorrect and ask them to provide the
+   correct one. Update `repo.remote_url` with the corrected value, also
+   update the `Remote URL` cell for this repo in `wiki/sync-config.md`,
+   and retry the clone.
+
+After processing all repos, ensure `wiki/.gitignore` contains the line
+`.sync-cache/`:
+- If `wiki/.gitignore` does not exist, create it with `.sync-cache/` as
+  its only line.
+- If the file exists, check whether it already contains `.sync-cache/`.
+  Only append the line if it is missing — never duplicate it.
+
+---
+
 ## Step 6 — Report and launch forge
 
 Report to the user:
@@ -515,7 +624,7 @@ Report to the user:
 
 Language: [LANGUAGE]
 Type: [PROJECT_TYPE]
-Repos configured: [list with name, path, stack, base_branch — or "none"]
+Repos configured: [list with name, remote_url, stack, base_branch — or "none"]
 
 Files created:
   WIKI.md
