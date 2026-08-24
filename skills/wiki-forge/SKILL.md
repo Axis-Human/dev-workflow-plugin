@@ -44,7 +44,7 @@ With that:
    `{{LANGUAGE}}` with the vault's values.
 5. Create empty `wiki/index.md` and `wiki/log.md`.
 
-> **Tip:** For a guided setup that asks all the right questions, use `/wiki-init` instead.
+> **Tip:** For a guided setup, use `/wiki-init` to create a new wiki from scratch, or `/wiki-connect` to attach an existing one.
 
 ### Vault architecture
 

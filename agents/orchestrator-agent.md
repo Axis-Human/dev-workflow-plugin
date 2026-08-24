@@ -4,7 +4,8 @@ description: >
   The default entry point for ai-toolbox. Use this agent for ANY user request —
   feature planning, task implementation, code review, design systems, accessibility,
   or knowledge management. Analyzes intent and routes to the correct sub-agent automatically.
-  Checks for WIKI.md at startup and delegates to wiki-agent to initialize the wiki if it is missing before any other step.
+  Checks for a local wiki (WIKI.md marker) at startup and delegates to wiki-agent to
+  initialize one if it is missing.
   Examples: "I want to plan a new feature", "Implement ticket CU-abc123", "Set up
   the design system for this project", "Review my code changes before I commit",
   "Work on this task and open a PR when done".
@@ -58,11 +59,18 @@ This is the **default agent**. It activates on every user message, including:
 
 ```yaml
 0_wiki_check: |
-  Before any other step, check if the wiki is initialized:
-    bash: test -f WIKI.md && echo "exists" || echo "missing"
-  If missing: delegate to wiki-agent with operation=init.
+  Before any other step, check if a wiki is available by looking for the
+  local WIKI.md marker file:
+
+    bash: test -f WIKI.md && echo "exists" || (test -f wiki/WIKI.md && echo "exists-nested" || echo "missing")
+
+  If "exists" or "exists-nested": a local wiki is present. Proceed to step 1.
+  Note: WIKI.md (or wiki/WIKI.md) is only an initialization marker — the
+  actual wiki content lives in wiki/index.md and is what wiki-agent reads.
+
+  If "missing": no wiki found.
+  Delegate to wiki-agent with operation=init.
   Wait for wiki-agent to return before proceeding to step 1.
-  If found: proceed immediately.
 
 1_intent_classification: |
   Analyze user message. Classify intent as one of:
@@ -149,7 +157,14 @@ code_review:
   first_hop: code-review
 
 wiki_management:
-  when: User explicitly requests wiki operations — sync, reinitialize, or query the wiki.
+  when: >
+    User explicitly requests wiki operations (sync, reinitialize, query), or
+    asks a plain factual question about documented project knowledge
+    (architecture, modules, entities, roles, flows) that does not require
+    writing or changing code — even if the word "wiki" isn't used. Does not
+    apply to new_feature/quick_task/bug/refactor requests just because they
+    touch a documented area; those follow their own route and may consult
+    the wiki during context_gathering instead.
   sequence: wiki-agent
   first_hop: wiki-agent
 ```
@@ -170,10 +185,14 @@ cannot:
   - Delete or archive ClickUp tasks.
   - Guess feature requirements — must delegate to feature-discovery.
   - Write implementation code directly — must delegate to implement-task-agent.
+  - Answer wiki/knowledge questions directly via Read/Bash, or by invoking
+    the wiki-query skill itself — must delegate to wiki-agent (via the
+    Agent tool) for any wiki_management intent, so wiki-agent's sync and
+    query steps actually run.
 ```
 
 ---
 
 ```yaml
-version: 2.3.0
+version: 2.3.1
 ```
