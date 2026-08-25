@@ -1,7 +1,7 @@
 ---
 name: wiki-sync
 description: Synchronizes the wiki with changes in source repositories since the last sync, always diffing against each repo's configured base branch — regardless of what branch is currently checked out locally. Invoke when the user asks to sync or update the wiki, or wants to bring it up to date with recent commits.
-allowed-tools: Read Write Edit Bash
+allowed-tools: Read Write Edit Bash AskUserQuestion
 effort: medium
 ---
 
@@ -28,7 +28,7 @@ If `wiki/sync-config.md` doesn't exist, abort:
 > "wiki/sync-config.md not found. Run /wiki-init to configure repos, or create it manually."
 
 Parse `wiki/sync-config.md` to extract:
-- `REPOS`: list of `{ name, path, base_branch }` objects from the Repositories table. The `base_branch` comes from the `Base branch` column in the table; if that column is absent or the value is empty for a given repo, default to `main`.
+- `REPOS`: list of `{ name, remote_url, stack, base_branch }` objects from the Repositories table. The `remote_url` and `stack` come from the `Remote URL` and `Stack` columns respectively. The `base_branch` comes from the `Base branch` column in the table; if that column is absent or the value is empty for a given repo, default to `main`.
 - `IMPACT_PATTERNS`: per-repo list of file glob patterns with wiki impact
 - `NO_IMPACT_PATTERNS`: list of patterns to ignore
 
@@ -36,6 +36,75 @@ If `REPOS` is empty (no data rows in the Repositories table, or the table body
 contains only a placeholder like `"(none)"`), inform the user:
 > "No source repos configured in wiki/sync-config.md. Nothing to sync."
 Then stop.
+
+---
+
+## Step 0.5 — Ensure bare clone cache
+
+For each repo in `REPOS`:
+
+1. Compute `CACHE_PATH = wiki/.sync-cache/[repo.name]`.
+
+2. Check if `CACHE_PATH/HEAD` exists (marker of a valid bare repo).
+   If it exists, skip to the next repo.
+
+3. If it does not exist, clone:
+
+   ```bash
+   git clone --bare [repo.remote_url] wiki/.sync-cache/[repo.name]
+   ```
+
+   After the clone succeeds, configure the fetch refspec so that
+   `origin/[branch]` references work (bare clones default to mapping
+   remote heads directly into `refs/heads/`):
+
+   ```bash
+   git -C wiki/.sync-cache/[repo.name] config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+   git -C wiki/.sync-cache/[repo.name] fetch origin
+   ```
+
+4. If the clone fails, classify the error from stderr:
+
+   **Authentication problem** — stderr contains patterns like "could not read
+   Username", "Authentication failed", "Permission denied", "403", or a
+   username/password prompt failure:
+
+   Tell the user:
+
+   > The clone failed because git could not authenticate. This usually means
+   > the credential flow needs an interactive prompt that cannot run from
+   > this automated session.
+   >
+   > Please run this command yourself in your own terminal:
+   > ```
+   > git clone --bare [repo.remote_url] wiki/.sync-cache/[repo.name]
+   > ```
+   > Your system's native credential dialog (Git Credential Manager, browser
+   > OAuth flow, SSH passphrase prompt) will appear and let you authenticate.
+   > Once it finishes, let me know and I will continue from here.
+
+   After the user confirms, verify the clone landed by checking that
+   `CACHE_PATH/HEAD` exists. If it does, configure the fetch refspec as
+   described in step 3 above, then continue.
+
+   **Repository not found** — stderr contains patterns like "repository not
+   found", "not found", "does not exist":
+
+   Tell the user the URL appears incorrect and ask them to review the
+   `Remote URL` for this repo in `wiki/sync-config.md`. Once they confirm
+   the correction, re-read the updated `wiki/sync-config.md` and retry
+   the clone with the new URL.
+
+After processing all repos, ensure `wiki/.gitignore` contains the line
+`.sync-cache/`:
+- If `wiki/.gitignore` does not exist, create it with `.sync-cache/` as
+  its only line.
+- If the file exists, check whether it already contains `.sync-cache/`.
+  Only append the line if it is missing — never duplicate it.
+
+From this point on, every reference to `[repo.path]` in the steps below
+means `CACHE_PATH` (`wiki/.sync-cache/[repo.name]`) — never a local
+working copy of the source code.
 
 ---
 
@@ -53,13 +122,13 @@ Format expected:
 ```
 
 If `wiki/sync.md` doesn't exist, treat all repos as first-time syncs.
-Use `git -C [path] rev-parse --short origin/[repo.base_branch]` to get the current remote base branch tip as a baseline,
+Use `git -C [CACHE_PATH] rev-parse --short origin/[repo.base_branch]` to get the current remote base branch tip as a baseline,
 then run a full scan instead of a diff. The file list for the scan must come from
 the remote base branch tree, not the local working tree (the repo may be checked
 out to a different branch):
 
 ```bash
-git -C [path] ls-tree -r --name-only origin/[repo.base_branch]
+git -C [CACHE_PATH] ls-tree -r --name-only origin/[repo.base_branch]
 ```
 
 ---
@@ -69,13 +138,13 @@ git -C [path] ls-tree -r --name-only origin/[repo.base_branch]
 For each repo in `REPOS`, first fetch the latest remote state for the repo's base branch:
 
 ```bash
-git -C [repo.path] fetch origin [repo.base_branch] 2>/dev/null
+git -C [CACHE_PATH] fetch origin [repo.base_branch] 2>/dev/null
 ```
 
 Then compute the diff against the repo's base branch:
 
 ```bash
-git -C [repo.path] log [last-hash]..origin/[repo.base_branch] --name-status --pretty=format:"" 2>/dev/null
+git -C [CACHE_PATH] log [last-hash]..origin/[repo.base_branch] --name-status --pretty=format:"" 2>/dev/null
 ```
 
 Where `[last-hash]` comes from `wiki/sync.md` for that repo.
@@ -113,7 +182,7 @@ Follow conventions loaded in Step 0 for all edits.
    never read it from the local working tree, since the repo may currently be
    checked out to a different branch than `[repo.base_branch]`:
    ```bash
-   git -C [repo.path] show origin/[repo.base_branch]:[file-path] 2>/dev/null
+   git -C [CACHE_PATH] show origin/[repo.base_branch]:[file-path] 2>/dev/null
    ```
    This never switches branches or touches the working tree, so it works
    regardless of what's currently checked out locally.
@@ -151,8 +220,8 @@ Scan modified pages for `[[wikilinks]]` that don't resolve to an existing
 For each repo, get the current base branch hash:
 
 ```bash
-git -C [repo.path] rev-parse --short origin/[repo.base_branch] 2>/dev/null
-git -C [repo.path] log -1 origin/[repo.base_branch] --pretty=format:"%s" 2>/dev/null
+git -C [CACHE_PATH] rev-parse --short origin/[repo.base_branch] 2>/dev/null
+git -C [CACHE_PATH] log -1 origin/[repo.base_branch] --pretty=format:"%s" 2>/dev/null
 ```
 
 Overwrite `wiki/sync.md` with the new hashes and today's date:
@@ -228,6 +297,122 @@ Ignored (no wiki impact): tests/SomeTest.php, composer.lock, ...
 
 ---
 
+## Step 8 — Offer to commit and push (optional)
+
+After reporting to the user, ask whether they want to commit and push the
+wiki changes now using `AskUserQuestion`:
+
+- **Question:** "Do you want to commit and push these wiki changes now?"
+- **Header:** "Commit & push"
+- **Options:**
+  - "Yes, commit and push"
+  - "No, I'll do it manually"
+
+### If the user selects "No"
+
+Stop here. The skill ends exactly as it would without this step — no git
+operations are performed.
+
+### If the user selects "Yes"
+
+#### 1. Stage only the wiki folder
+
+```bash
+git add wiki/
+```
+
+Never use `git add -A` or `git add .`. Never stage files outside `wiki/`
+(`raw/`, `local/`, or any other directory the user may have changed
+independently). This skill only modifies content inside `wiki/`, so the
+stage must be scoped to match.
+
+#### 2. Check that there is something to commit
+
+```bash
+git diff --cached --stat
+```
+
+If there are no staged changes (edge case — Step 2 already stops early when
+there are no diffs, but guard against it anyway), inform the user:
+
+> No wiki files were changed — nothing to commit.
+
+Then stop. Do not proceed to commit or push.
+
+#### 3. Build the commit message
+
+Reuse the per-repo hash ranges and wiki-change lists already computed in
+Steps 5–7. Format:
+
+```
+wiki-sync: update from [repo.name]@[old-hash]..[new-hash]
+```
+
+If multiple repos had changes, list each on its own line:
+
+```
+wiki-sync: update from repo-a@aaa1111..bbb2222, repo-b@ccc3333..ddd4444
+```
+
+After the subject line, add a body listing the wiki pages affected:
+
+```
+Updated: page-a, page-b
+Created: page-c
+Deleted: page-d
+```
+
+Omit any category that has no entries (e.g., if nothing was deleted, do not
+include the `Deleted:` line).
+
+#### 4. Commit
+
+```bash
+git commit -m "<message>"
+```
+
+#### 5. Push
+
+```bash
+git push 2>&1
+```
+
+Capture both stdout and stderr and interpret the result:
+
+**Success** — the push exits 0:
+
+Tell the user the changes were pushed, mentioning the remote and branch
+(e.g., `origin/main`).
+
+**Authentication failure** — stderr contains patterns like "could not read
+Username", "Authentication failed", "Permission denied", "403", or a
+username/password prompt failure:
+
+Tell the user:
+
+> The push failed because git could not authenticate. This usually means
+> the credential flow needs an interactive prompt that cannot run from
+> this automated session.
+>
+> Please run this command yourself in your own terminal:
+> ```
+> git push
+> ```
+> Your system's native credential dialog (Git Credential Manager, browser
+> OAuth flow, SSH passphrase prompt) will appear and let you authenticate.
+
+Then stop. Do not retry.
+
+**Any other failure** (e.g., rejected because the remote has new commits,
+diverged histories, protected branch, hook failure):
+
+Report the exact error to the user and tell them to resolve it manually
+(pull, rebase, or whatever their workflow requires). **Never** run
+`git push --force` or any force-push variant automatically, under any
+circumstance.
+
+---
+
 ## What NOT to do
 
 - Do not re-read the entire codebase. Only read files listed in the diff.
@@ -237,4 +422,4 @@ Ignored (no wiki impact): tests/SomeTest.php, composer.lock, ...
 - Do not update `wiki/sync.md` if the sync failed or was aborted partway.
 - Do not ask for confirmation before applying changes.
 - Do not invent conventions. All standards come from `.claude/wiki-conventions.md`.
-- Do not hardcode repo paths, file patterns, or branch names — always read from `wiki/sync-config.md`.
+- Do not hardcode file patterns or branch names — always read from `wiki/sync-config.md`. Repo paths are always computed as `wiki/.sync-cache/[repo.name]` — never configurable, never a local working copy.
