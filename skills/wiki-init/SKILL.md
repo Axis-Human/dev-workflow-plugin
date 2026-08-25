@@ -100,7 +100,8 @@ Inspect files at `[repo.path]` to classify the stack. Check in this order
 |-------------|-------|
 | `composer.json` **and** `artisan` | Laravel / PHP |
 | `package.json` **and** `angular.json` | Angular / TypeScript |
-| `package.json` (without `angular.json`) | Node / Express / NestJS |
+| `package.json` **and** `next.config.js` (or `.ts`/`.mjs`) | Next.js / React |
+| `package.json` (without `angular.json`/`next.config.*`) | Node / Express / NestJS |
 | `manage.py` | Django / Python |
 | `Gemfile` | Rails / Ruby |
 | `go.mod` | Go |

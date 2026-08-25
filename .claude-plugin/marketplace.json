@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "A curated set of skills and agents for software teams. Covers accessibility auditing, code review, project initialization, and an end-to-end feature planning workflow backed by ClickUp.",
-    "version": "1.1.5"
+    "version": "1.1.6"
   },
   "plugins": [
     {
@@ -16,7 +16,7 @@
         "repo": "Axis-Human/dev-workflow-plugin"
       },
       "description": "Skills and agents for software teams: accessibility auditing, code review, project initialization, and feature planning with ClickUp integration.",
-      "version": "1.1.5",
+      "version": "1.1.6",
       "author": {
         "name": "Axis Human"
       },
