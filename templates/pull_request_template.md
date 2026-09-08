@@ -1,36 +1,46 @@
 ## Description 📝
-<populated description bullets>
 
-### Type of Change
-- [ ] Feature
-- [ ] Bug Fix
-- [ ] Refactor
-- [ ] Docs
-- [ ] Chore
-- [ ] Hotfix
+> Provide a description of what did you do in this PR, or just a general
+> description whatever works for the particular PR.
 
-### Related Ticket
-<ticket URL or "N/A">
+use the below semantics for listing what is in this PR
 
-### Module
-- Migration: <M{N} or empty>
-- Sprint: <S{N} or empty>
+- add
+- update
+- fix
+- refactor
+- delete
 
-### Shared Code Impact
-<Include only if Yes: file list and Team notified>
+## Module
 
-### Breaking Changes
-<Include only if Yes: describe what breaks and the migration path>
+- Section Name: M{N}
+- Sprint: {Sprint Number}
 
-### FYI 🙋
-<@handles or "No additional stakeholders identified.">
+## Shared Code Impact
 
-### Screenshots 📸
-<screenshot entries or "No UI changes in this PR.">
+- Shared code affected/modified?: (Yes/No)
+- ## Shared code modified (list files)
+- Team notified of shared code changes?: (Yes/No)
 
-### Test Plan 🧪
-<checkbox list>
+## FYI 🙋
 
-### Release Readiness
-- Ready for release: <Yes/No>
-- Needs additional work: <Yes/No>
+> Please tag (@) people who need to be noticed about this changes
+
+## Screenshots 📸
+
+> If required please add a screenshots or video/.gif recording of your local
+> smoke testing These can also be added as a comment to your ClickUp ticket
+
+## Testing
+
+- Breaking changes: (Yes/No)
+- Manual testing completed: (Yes/No)
+- Unit tests added/updated: (Yes/No)
+  > If you need testing to be completed please add instruction here, the PR
+  > reviewer will pull down the PR branch code and run testing locally on their
+  > computer.
+
+## Release Readiness
+
+- Ready for release: (Yes/No)
+- Needs additional work: (Yes/No)

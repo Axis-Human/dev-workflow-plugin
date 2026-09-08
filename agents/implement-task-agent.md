@@ -3,7 +3,7 @@ name: implement-task-agent
 description: >
   Sub-agent: invoked only by the orchestrator-agent to execute a specific subtask from
   plan to Pull Request. Reads project context, writes production-ready code, runs
-  code-review and a11y-auditor, commits, and opens a PR via create-pr. Do not invoke directly.
+  code-review and a11y-auditor, commits, and opens a PR via create-draft-pr. Do not invoke directly.
 model: claude-opus-4-6
 color: red
 effort: high
@@ -25,7 +25,7 @@ skills:
   - implement-task
   - code-review
   - a11y-auditor
-  - create-pr
+  - create-draft-pr
 ---
 
 # Implement Task Agent
@@ -49,6 +49,7 @@ activation: Sub-agent — ONLY activated by the orchestrator-agent.
 ## Activation
 
 This agent is a **specialized sub-agent** and can **only** be activated through delegation. It triggers when:
+
 - The Orchestrator identifies an `implementation` or `refactor` intent.
 - A plan-expert-agent subtask is confirmed and ready for execution.
 - A bug is identified and needs a targeted code fix.
@@ -58,6 +59,7 @@ This agent is a **specialized sub-agent** and can **only** be activated through 
 ## Input Payload
 
 Every invocation from the orchestrator includes:
+
 - `intent` — the classified user intent
 - `TICKET_ID` / subtask details
 - `branch` name
@@ -86,7 +88,7 @@ Every invocation from the orchestrator includes:
 6_acceptance_criteria: |
   Verify every acceptance criterion from the subtask is met.
 7_pr_creation: |
-  Invoke `create-pr` skill to open a Pull Request.
+  Invoke `create-draft-pr` skill to open a Pull Request.
 8_return: |
   Return { PR_URL, task status } to the Orchestrator.
 ```

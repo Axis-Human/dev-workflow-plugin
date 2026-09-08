@@ -10,19 +10,19 @@ A Claude Code plugin with a curated set of skills and agents for software teams.
 
 Skills are reusable workflows invoked with a `/` command directly in Claude Code. Each skill is independent and can be used on its own.
 
-| Skill | Command | What it does |
-|---|---|---|
-| **init-project** | `/init-project` | Scans the codebase and generates an `AGENTS.md` with the detected stack, structure, and dev commands. Run this first on any new project. |
-| **code-review** | `/code-review` | Two-phase code review: fast pre-commit checks (spec compliance, type safety, security) followed by a deep SOLID / KISS / DRY structural audit. |
-| **a11y-auditor** | `/a11y-auditor` | Audits code or components for accessibility barriers against WCAG 2.2 (A, AA, AAA). Auto-detects web vs. mobile stack. |
-| **feature-discovery** | `/feature-discovery` | Acts as a functional analyst to gather all feature requirements through structured questioning. Outputs a comprehensive spec and optionally creates a ClickUp ticket. |
-| **plan-expert** | `/plan-expert` | Takes a ClickUp ticket or a free-form description and breaks it into detailed, ordered subtasks using a structured 8-section template. Creates subtasks on the ClickUp ticket or as a local task list. |
-| **design-expert** | `/design-expert` | Scans the project for all design-related information (colors, typography, spacing, component patterns, dark mode, design system) and generates or updates a `DESIGN.md` file. |
-| **design-system-docs** | `/design-system-docs` | Audits design system documentation. If Storybook is present, reviews its quality and suggests improvements. If not, produces a step-by-step plan to implement it. |
-| **design-system-setup** | `/design-system-setup` | End-to-end design system setup. Runs `design-expert` → `design-system-docs` → `plan-expert` in sequence to document the design system, audit or plan Storybook, and create all execution tasks in ClickUp or locally. |
-| **planning-features** | `/planning-features` | End-to-end feature planning. Runs `feature-discovery` then `plan-expert` back to back — gathers requirements, creates a ClickUp ticket, and breaks it into an execution plan. |
-| **create-pr** | `/create-pr` | Creates a GitHub PR with a fully auto-populated standardized template. Infers base branch, derives description from the diff, detects shared code impact, tags stakeholders from CODEOWNERS, and builds a concrete test plan. Designed to run without human input when called by an agent. |
-| **implement-task** | `/implement-task` | Implements a task end-to-end. Given a ClickUp ticket ID or description, reads project context, plans at the file level, writes the code, runs automated checks + `code-review`, applies fixes, commits, and opens a PR via `create-pr`. |
+| Skill                   | Command                | What it does                                                                                                                                                                                                                                                                               |
+| ----------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **init-project**        | `/init-project`        | Scans the codebase and generates an `AGENTS.md` with the detected stack, structure, and dev commands. Run this first on any new project.                                                                                                                                                   |
+| **code-review**         | `/code-review`         | Two-phase code review: fast pre-commit checks (spec compliance, type safety, security) followed by a deep SOLID / KISS / DRY structural audit.                                                                                                                                             |
+| **a11y-auditor**        | `/a11y-auditor`        | Audits code or components for accessibility barriers against WCAG 2.2 (A, AA, AAA). Auto-detects web vs. mobile stack.                                                                                                                                                                     |
+| **feature-discovery**   | `/feature-discovery`   | Acts as a functional analyst to gather all feature requirements through structured questioning. Outputs a comprehensive spec and optionally creates a ClickUp ticket.                                                                                                                      |
+| **plan-expert**         | `/plan-expert`         | Takes a ClickUp ticket or a free-form description and breaks it into detailed, ordered subtasks using a structured 8-section template. Creates subtasks on the ClickUp ticket or as a local task list.                                                                                     |
+| **design-expert**       | `/design-expert`       | Scans the project for all design-related information (colors, typography, spacing, component patterns, dark mode, design system) and generates or updates a `DESIGN.md` file.                                                                                                              |
+| **design-system-docs**  | `/design-system-docs`  | Audits design system documentation. If Storybook is present, reviews its quality and suggests improvements. If not, produces a step-by-step plan to implement it.                                                                                                                          |
+| **design-system-setup** | `/design-system-setup` | End-to-end design system setup. Runs `design-expert` → `design-system-docs` → `plan-expert` in sequence to document the design system, audit or plan Storybook, and create all execution tasks in ClickUp or locally.                                                                      |
+| **planning-features**   | `/planning-features`   | End-to-end feature planning. Runs `feature-discovery` then `plan-expert` back to back — gathers requirements, creates a ClickUp ticket, and breaks it into an execution plan.                                                                                                              |
+| **create-draft-pr**     | `/create-draft-pr`     | Creates a GitHub PR with a fully auto-populated standardized template. Infers base branch, derives description from the diff, detects shared code impact, tags stakeholders from CODEOWNERS, and builds a concrete test plan. Designed to run without human input when called by an agent. |
+| **implement-task**      | `/implement-task`      | Implements a task end-to-end. Given a ClickUp ticket ID or description, reads project context, plans at the file level, writes the code, runs automated checks + `code-review`, applies fixes, commits, and opens a PR via `create-draft-pr`.                                              |
 
 ### Agents
 
@@ -30,19 +30,19 @@ Agents follow an **orchestrator → sub-agent** architecture. The `orchestrator-
 
 ### Orchestrator (default)
 
-| Agent | Role |
-|---|---|
+| Agent                  | Role                                                                                                                                                 |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **orchestrator-agent** | **Default entry point.** Handles any user request by classifying intent and routing to the right sub-agent. Always runs first; always responds last. |
 
 ### Sub-agents (invoked by orchestrator only)
 
-| Agent | Activated when |
-|---|---|
-| **planning-features-agent** | `new_feature` intent — coordinates discovery + planning end-to-end. |
-| **feature-discovery-agent** | Called by `planning-features-agent` — structured requirement interviews → FEATURE_SPEC + ClickUp ticket. |
-| **plan-expert-agent** | `quick_task`, `refactor`, or after discovery — decomposes specs into 8-section subtasks. |
-| **implement-task-agent** | `implementation` intent or after planning — writes code, runs review, commits, opens PR. |
-| **design-system-setup-agent** | `design_system` intent — design-expert → design-system-docs → plan-expert pipeline. |
+| Agent                         | Activated when                                                                                           |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **planning-features-agent**   | `new_feature` intent — coordinates discovery + planning end-to-end.                                      |
+| **feature-discovery-agent**   | Called by `planning-features-agent` — structured requirement interviews → FEATURE_SPEC + ClickUp ticket. |
+| **plan-expert-agent**         | `quick_task`, `refactor`, or after discovery — decomposes specs into 8-section subtasks.                 |
+| **implement-task-agent**      | `implementation` intent or after planning — writes code, runs review, commits, opens PR.                 |
+| **design-system-setup-agent** | `design_system` intent — design-expert → design-system-docs → plan-expert pipeline.                      |
 
 > **How to use:** Just describe what you want in natural language. The orchestrator routes automatically. Use `/` skills for direct, one-off invocations when you know exactly which step to run.
 
@@ -50,11 +50,11 @@ Agents follow an **orchestrator → sub-agent** architecture. The `orchestrator-
 
 These three agents are **not** routed through the orchestrator. They form a self-contained end-to-end browser-testing pipeline and are invoked directly via `/agents` (or by naming them). They run against a live web app through the `playwright-test` MCP server.
 
-| Agent | Role |
-|---|---|
-| **playwright-test-planner** | Explores a running web app in a real browser, maps user flows, and writes a comprehensive Markdown test plan (happy paths, edge cases, negative scenarios). |
-| **playwright-test-generator** | Takes a test plan and generates Playwright `.spec.ts` files — executing each step live in the browser to produce robust, best-practice selectors and assertions. |
-| **playwright-test-healer** | Runs the generated suite, debugs failing tests, fixes selectors/assertions/timing, and re-runs until green. Marks genuinely stuck-but-correct tests as `test.fixme()`. |
+| Agent                         | Role                                                                                                                                                                   |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **playwright-test-planner**   | Explores a running web app in a real browser, maps user flows, and writes a comprehensive Markdown test plan (happy paths, edge cases, negative scenarios).            |
+| **playwright-test-generator** | Takes a test plan and generates Playwright `.spec.ts` files — executing each step live in the browser to produce robust, best-practice selectors and assertions.       |
+| **playwright-test-healer**    | Runs the generated suite, debugs failing tests, fixes selectors/assertions/timing, and re-runs until green. Marks genuinely stuck-but-correct tests as `test.fixme()`. |
 
 ---
 
@@ -85,12 +85,12 @@ This installs the plugin and configures the required hooks in `~/.claude/setting
 Point Claude Code to the GitHub repository URL and it will install the plugin automatically:
 
 ```bash
-claude 
+claude
 ```
 
 ```bash
 /plugin marketplace add axis-human/dev-workflow-plugin
-```   
+```
 
 Claude Code fetches the plugin from GitHub and keeps it available. To update to the latest version at any time:
 
@@ -123,9 +123,9 @@ Or open `~/.claude/settings.json` and add it manually:
 
 ```json
 {
-  "enabledPlugins": {
-    "axis-human-ai-toolbox": true
-  }
+	"enabledPlugins": {
+		"axis-human-ai-toolbox": true
+	}
 }
 ```
 
@@ -195,10 +195,10 @@ All skills accept optional arguments. Run without arguments and the skill will a
 /planning-features
 
 # Create a PR with auto-populated template from the current branch diff
-/create-pr
+/create-draft-pr
 
 # Create a PR targeting a specific base branch
-/create-pr --base develop
+/create-draft-pr --base develop
 
 # Implement a task from a ClickUp ticket and open a PR
 /implement-task --ticket-id abc123xyz
@@ -239,6 +239,7 @@ playwright-test-planner  →  playwright-test-generator  →  playwright-test-he
 - Playwright installed in the target project (`npm install -D @playwright/test && npx playwright install`).
 - The `playwright-test` MCP server (declared in `.mcp.json`). It launches via `npx playwright run-test-mcp-server` and works on macOS, Linux, and Windows out of the box.
   > **Windows note:** if `npx` isn't resolved when the server spawns, wrap it through `cmd`:
+  >
   > ```json
   > "playwright-test": { "command": "cmd", "args": ["/c", "npx", "playwright", "run-test-mcp-server"] }
   > ```
@@ -284,7 +285,7 @@ axis-human-ai-toolbox/
 │   │   └── SKILL.md
 │   ├── code-review/
 │   │   └── SKILL.md
-│   ├── create-pr/
+│   ├── create-draft-pr/
 │   │   └── SKILL.md
 │   ├── design-expert/
 │   │   └── SKILL.md
@@ -310,11 +311,13 @@ axis-human-ai-toolbox/
 ## Adding a new skill
 
 1. Create a new directory under `skills/`:
+
    ```bash
    mkdir skills/my-skill
    ```
 
 2. Create `skills/my-skill/SKILL.md` with this frontmatter:
+
    ```markdown
    ---
    name: my-skill
@@ -336,11 +339,13 @@ axis-human-ai-toolbox/
 ## Adding a new agent
 
 1. Create a new file under `agents/`:
+
    ```bash
    touch agents/my-agent.md
    ```
 
 2. Write the agent file with this frontmatter:
+
    ```markdown
    ---
    name: my-agent
@@ -373,10 +378,10 @@ axis-human-ai-toolbox/
 
 ## MCP servers
 
-| Server | Type | Purpose |
-|---|---|---|
-| `github` | HTTP | GitHub repository operations via the Copilot MCP endpoint |
-| `clickup` | HTTP | ClickUp task management — read tickets, create tasks and subtasks |
+| Server            | Type  | Purpose                                                                                             |
+| ----------------- | ----- | --------------------------------------------------------------------------------------------------- |
+| `github`          | HTTP  | GitHub repository operations via the Copilot MCP endpoint                                           |
+| `clickup`         | HTTP  | ClickUp task management — read tickets, create tasks and subtasks                                   |
 | `playwright-test` | stdio | Browser automation for the Playwright test agents — explore apps, generate and run `.spec.ts` tests |
 
 The MCP configuration is automatically picked up by Claude Code as a project-scoped config. Tokens are read from environment variables — never committed to the repo.

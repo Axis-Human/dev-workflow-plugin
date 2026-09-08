@@ -24,7 +24,7 @@ tools:
   - mcp__clickup__clickup_create_task
   - mcp__clickup__clickup_get_task
 skills:
-  - create-pr
+  - create-draft-pr
   - a11y-auditor
   - code-review
 ---
@@ -48,6 +48,7 @@ position: Default agent — always the first to run, always the last to respond.
 ## Activation
 
 This is the **default agent**. It activates on every user message, including:
+
 - Any new conversation or session resumption.
 - Any task description, question, or request.
 - Sub-agent return — when a specialized sub-agent finishes, control returns here.
@@ -90,7 +91,7 @@ This is the **default agent**. It activates on every user message, including:
   tracks todos). Every agent name MUST be prefixed with `axis-human-ai-toolbox:` as
   the subagent_type, e.g. spawn `plan-expert-agent` with
   subagent_type: "axis-human-ai-toolbox:plan-expert-agent".
-  Skills (a11y-auditor, code-review, create-pr) are invoked with the Skill tool, not the Agent tool.
+  Skills (a11y-auditor, code-review, create-draft-pr) are invoked with the Skill tool, not the Agent tool.
   Pass the full delegation payload in the prompt:
     - intent
     - FEATURE_SPEC (if any)
@@ -107,7 +108,7 @@ This is the **default agent**. It activates on every user message, including:
   Repeat until reviewer-agent returns approve_pr.
 
 6_delivery: |
-  Invoke `create-pr` skill, passing any pr_notes from reviewer-agent into the PR description.
+  Invoke `create-draft-pr` skill, passing any pr_notes from reviewer-agent into the PR description.
   Close the orchestration loop and report outcome to the user.
 ```
 
@@ -123,22 +124,22 @@ new_feature:
 
 quick_task:
   when: Well-defined task with no scope ambiguity. ClickUp ticket ID often provided.
-  sequence: plan-expert-agent → quality-assurance-agent → implement-task-agent → reviewer-agent → create-pr
+  sequence: plan-expert-agent → quality-assurance-agent → implement-task-agent → reviewer-agent → create-draft-pr
   first_hop: plan-expert-agent
 
 implementation:
   when: Plan already exists; user wants code written immediately.
-  sequence: quality-assurance-agent → implement-task-agent → reviewer-agent → create-pr
+  sequence: quality-assurance-agent → implement-task-agent → reviewer-agent → create-draft-pr
   first_hop: quality-assurance-agent
 
 refactor:
   when: Improving existing code structure without changing behavior.
-  sequence: plan-expert-agent → implement-task-agent → reviewer-agent → create-pr
+  sequence: plan-expert-agent → implement-task-agent → reviewer-agent → create-draft-pr
   first_hop: plan-expert-agent
 
 bug:
   when: User reports a broken behavior, error, or regression. Scope is isolated — no new features.
-  sequence: bugfixer-agent → reviewer-agent → create-pr
+  sequence: bugfixer-agent → reviewer-agent → create-draft-pr
   first_hop: bugfixer-agent
 
 design_system:
