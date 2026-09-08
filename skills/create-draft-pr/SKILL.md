@@ -1,6 +1,6 @@
 ---
 name: create-draft-pr
-description: Creates a GitHub pull request (always as Draft, no exceptions) auto-populated from the repo's `.github/pull_request_template.md`. Infers base branch, title, and every section from git context (diff, commits, branch name, CODEOWNERS). Uses gh CLI first, GitHub MCP as fallback. Runs without human input when `--auto` is passed or called by another skill/agent.
+description: Creates a GitHub pull request (always as Draft, no exceptions) auto-populated from the repo's `.templates/pull_request_template.md`. Infers base branch, title, and every section from git context (diff, commits, branch name, CODEOWNERS). Uses gh CLI first, GitHub MCP as fallback. Runs without human input when `--auto` is passed or called by another skill/agent.
 argument-hint: [--base <branch>] [--ticket-id <id>] [--auto]
 allowed-tools: Bash AskUserQuestion mcp__github__create_pull_request mcp__github__list_branches
 effort: low
@@ -46,7 +46,7 @@ Read `.templates/pull_request_template.md` at the repo root and use it verbatim 
 - **Description 📝** — 2-4 bullets covering why + what, each starting with `add`/`update`/`fix`/`refactor`/`delete`. Rewrite commit messages as intent statements; reference real function/component/route names.
 - **Module** — extract `M{N}` and `S{N}` from branch name/commits (patterns like `M1`, `migration-1`, `S12`, `sprint-12`). Use `<!-- TBD -->` if absent — never invent.
 - **Shared Code Impact** — flag files under `shared/`, `core/`, `common/`, `lib/`, `utils/`, `helpers/`, `hooks/`, `composables/`, `services/`, `types/`, `constants/`. List them if any; `Team notified: No`.
-- **FYI 🙋** — merge GitHub handles from `CODEOWNERS` (root or `.github/`) for changed files with contributor emails from `git log <BASE>...HEAD --format="%ae" -- <files>`, dedupe, remove the current author (`git config user.email`). If empty: "No additional stakeholders identified."
+- **FYI 🙋** — merge GitHub handles from `CODEOWNERS` (root or `.templates/`) for changed files with contributor emails from `git log <BASE>...HEAD --format="%ae" -- <files>`, dedupe, remove the current author (`git config user.email`). If empty: "No additional stakeholders identified."
 - **Screenshots 📸** — if changed files touch UI (`pages/`, `views/`, `routes/`, `screens/`, `app/`, `src/app/`, or `.vue/.svelte/Page./View./Screen./Layout.`), list affected routes and note screenshots are needed at `.github/evidence/<filename>.png`. Otherwise: "No UI changes in this PR."
 - **Testing** — set `Breaking changes` (Yes if diff/commits show removed API params/responses, changed shared function signatures, dropped DB columns, or `BREAKING CHANGE:`/`!` in commit type), `Manual testing completed`, `Unit tests added/updated` based on the diff. Add brief instructions only if a reviewer needs specific steps to verify.
 - **Release Readiness** — `Ready for release: Yes` unless known gaps exist; `Needs additional work: No` unless something is incomplete.
