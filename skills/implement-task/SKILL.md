@@ -26,12 +26,15 @@ Parse `$ARGUMENTS` for `--ticket-id` and `--description`.
 **Case A — `--ticket-id` provided:**
 
 Fetch the task from ClickUp:
+
 ```
 mcp__clickup__clickup_get_task { task_id: "<ticket-id>" }
 ```
+
 Extract: `name`, `description`, `status`, `assignees`, and `subtasks` (the list of child task objects, if any).
 
 If the ticket cannot be fetched, stop:
+
 > "Could not fetch ticket `<id>`. Check the ID or ClickUp MCP access."
 
 **If the ticket has subtasks (the `subtasks` list is non-empty):**
@@ -39,9 +42,11 @@ If the ticket cannot be fetched, stop:
 This is a parent task. Switch to the multi-subtask flow in Step 1b. Do not treat the parent ticket itself as work to implement — it is only the container.
 
 Fetch each subtask in full:
+
 ```
 mcp__clickup__clickup_get_task { task_id: "<subtask-id>" }
 ```
+
 Build an ordered list `SUBTASK_LIST` preserving the ClickUp order. For each subtask, parse its description using the 8-section plan-expert template if present (Context, What to implement, Where, Acceptance criteria, Out of scope, Technical notes, Depends on, Definition of done).
 
 Store `PARENT_TICKET_ID`, `PARENT_TICKET_NAME`, and `SUBTASK_LIST`. Set `MULTI_SUBTASK_MODE = true`. Proceed to Step 1b.
@@ -55,6 +60,7 @@ This is a leaf task. Parse the description using the 8-section plan-expert templ
 **Case B — `--description` provided (no ticket):**
 
 Run the full `plan-expert` skill as defined in its SKILL.md, passing:
+
 - `--description "<description>"` — the full description text
 
 `plan-expert` will decompose the work into structured subtasks using its 8-section template and present them for confirmation. Once the user confirms, the resulting subtask plan is stored as `TASK_PLAN` and used as the implementation input for all subsequent steps.
@@ -66,6 +72,7 @@ Do not proceed to Step 2 until `plan-expert` has completed and the plan is confi
 **Case C — Neither provided:**
 
 Use `AskUserQuestion`:
+
 - Header: "Implement task"
 - Question: "What do you want to implement? Paste a ClickUp ticket ID or describe the task."
 - Options: `I have a ClickUp ticket ID`, `I'll describe the task`
@@ -81,7 +88,7 @@ If the user provides a description, treat as Case B.
 
 ### Branch structure
 
-Before implementing anything, infer the base branch (same logic as `create-pr` Step 3: check remote branches for `main` → `master` → `develop` → `staging`). Store as `BASE_BRANCH`.
+Before implementing anything, infer the base branch (same logic as `create-draft-pr` Step 3: check remote branches for `main` → `master` → `develop` → `staging`). Store as `BASE_BRANCH`.
 
 Create a parent feature branch from `BASE_BRANCH`:
 
@@ -113,6 +120,7 @@ Each subtask gets its own branch and PR targeting the previous branch.
 ```
 
 Ask:
+
 > "Does this order look correct? Confirm to start implementing, or describe what to change."
 
 Wait for confirmation. Once confirmed, iterate through `SUBTASK_LIST` in order. For each subtask:
@@ -217,6 +225,7 @@ Produce a file-level plan before writing any code. The plan must list every conc
 Cross-reference the **Out of scope** section from the ticket or plan — do not implement anything listed there.
 
 Present the plan to the user and ask:
+
 > "Does this implementation plan look correct? Confirm to start, or describe what to change."
 
 Wait for confirmation before proceeding. Do not start writing code until the plan is approved.
@@ -232,6 +241,7 @@ Derive the branch name from `CURRENT_TASK`:
 - Slug from the task name: lowercase, hyphens, max 40 characters
 
 Determine the source branch:
+
 - **Single task** (`MULTI_SUBTASK_MODE = false`): branch from the inferred base branch (`main` / `master` / `develop`)
 - **Multi-subtask** (`MULTI_SUBTASK_MODE = true`): branch from `CURRENT_BASE` (set by Step 1b for this iteration)
 
@@ -244,6 +254,7 @@ Example (single task): `feat/CU-abc123-add-user-auth-flow` branched from `main`
 Example (subtask 2): `feat/CU-sub2-add-token-service` branched from `feat/CU-sub1-add-auth-endpoint`
 
 If the branch already exists locally, switch to it:
+
 ```bash
 git checkout <branch>
 ```
@@ -255,20 +266,24 @@ git checkout <branch>
 Execute the plan from Step 4 in order. For each action:
 
 **Creating a file:**
+
 - Follow the naming and structure conventions identified in Step 3
 - Reuse existing utilities, components, and patterns — do not reinvent what already exists
 - Match the code style of adjacent files exactly (indentation, import order, export style)
 
 **Modifying a file:**
+
 - Read the file again immediately before editing
 - Make the minimum change required — do not refactor unrelated code
 - Do not alter formatting of untouched lines
 
 **Running commands:**
+
 - Use the commands from `AGENTS.md` (dev commands section) as the authority
 - If a command fails, diagnose and fix the root cause before continuing — do not skip
 
 After all files are written, do a final pass:
+
 - Re-read every file you created or modified
 - Verify naming conventions, import patterns, and structure match the project
 - Confirm the **Acceptance criteria** from the ticket or plan are addressed by the code
@@ -293,6 +308,7 @@ Run all applicable verification commands from `AGENTS.md`. At minimum:
 ```
 
 If any command fails:
+
 - Read the error output
 - Fix the root cause in the affected file
 - Re-run the failing command
@@ -306,12 +322,14 @@ Run the full `code-review` skill as defined in its SKILL.md, scoping the review 
 - `code-review` will run its Phase 1 (fast checks) and Phase 2 (SOLID / structural audit) on those files
 
 **If `code-review` reports errors or warnings:**
+
 - Apply every fix marked as ❌ Error — these are blocking
 - Apply fixes marked as ⚠️ Warning unless they conflict with the task's explicit Out of scope section
 - After applying all fixes, re-run the automated checks from 7a to confirm nothing broke
 - Do not proceed until `code-review` produces no blocking errors
 
 **If `code-review` reports no issues or only passing items:**
+
 - Proceed to Step 8 immediately
 
 Do not proceed to Step 8 with unresolved code-review errors.
@@ -348,16 +366,17 @@ If the commit is rejected by a pre-commit hook, fix the issue the hook reports a
 
 ## Step 9 — Open the PR
 
-Run the `create-pr` skill as defined in its SKILL.md, passing:
-- `--auto` — skip confirmation steps inside `create-pr`
+Run the `create-draft-pr` skill as defined in its SKILL.md, passing:
+
+- `--auto` — skip confirmation steps inside `create-draft-pr`
 - `--ticket-id <id>` — the current subtask or single task ID
 - `--base <branch>` — set explicitly:
   - **Single task**: the inferred base branch (`main` / `master` / `develop`)
   - **Multi-subtask**: `CURRENT_BASE` for this iteration (the previous subtask's branch, or the parent feature branch for subtask 1)
 
-Passing `--base` explicitly prevents `create-pr` from re-inferring the target and ensures each subtask PR targets its correct predecessor branch.
+Passing `--base` explicitly prevents `create-draft-pr` from re-inferring the target and ensures each subtask PR targets its correct predecessor branch.
 
-`create-pr` will populate the full PR template from the diff against `--base` and open the PR automatically. Capture the returned `PR_URL`.
+`create-draft-pr` will populate the full PR template from the diff against `--base` and open the PR automatically. Capture the returned `PR_URL`.
 
 ---
 
