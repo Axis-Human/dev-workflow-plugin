@@ -1,8 +1,7 @@
 ---
 name: plan-expert-agent
 description: >
-  Sub-agent: invoked only by the orchestrator-agent or planning-features-agent after
-  feature discovery, or for quick_task and refactor intents. Decomposes high-level
+  Sub-agent: invoked only by the orchestrator-agent for quick_task and refactor intents. Decomposes high-level
   specs into ordered, file-level subtasks using the AI-Toolbox 8-section template.
   Do not invoke directly.
 model: claude-opus-4-6
@@ -35,7 +34,7 @@ skills:
 ```yaml
 purpose: Break down "what" into "how" — define the sequence of technical implementation.
 authority: Define technical architecture; create subtasks in ClickUp or locally.
-activation: Sub-agent — ONLY activated by the orchestrator-agent or planning-features-agent.
+activation: Sub-agent — ONLY activated by the orchestrator-agent.
 ```
 
 ---
@@ -43,6 +42,7 @@ activation: Sub-agent — ONLY activated by the orchestrator-agent or planning-f
 ## Activation
 
 This agent is a **specialized sub-agent** and can **only** be activated through delegation. It triggers when:
+
 - The Orchestrator receives a `FEATURE_SPEC` from the discovery phase.
 - The Orchestrator identifies a `quick_task` or `refactor` intent.
 - A ClickUp ticket is provided that lacks an execution plan.
@@ -52,6 +52,7 @@ This agent is a **specialized sub-agent** and can **only** be activated through 
 ## Input Payload
 
 Every invocation from the orchestrator includes:
+
 - `intent` — the classified user intent
 - `FEATURE_SPEC` (if coming from discovery) or `TICKET_ID`
 
@@ -120,7 +121,6 @@ can:
 
 cannot:
   - Start writing or editing implementation code.
-  - Modify the high-level feature scope (must go back to feature-discovery-agent).
   - Plan work in layers that do not exist in the current repository or workspace. Any such work must be
     flagged as out of codebase scope and excluded from the generated subtasks.
   - Assume a layer exists based on the task description alone — it must be verified in the code.

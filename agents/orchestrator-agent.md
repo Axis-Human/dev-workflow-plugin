@@ -184,7 +184,7 @@ cannot:
   - Merge code to any branch.
   - Approve code reviews.
   - Delete or archive ClickUp tasks.
-  - Guess feature requirements — must delegate to feature-discovery.
+  - Guess feature requirements — must delegate to planning-features-agent.
   - Write implementation code directly — must delegate to implement-task-agent.
   - Answer wiki/knowledge questions directly via Read/Bash, or by invoking
     the wiki-query skill itself — must delegate to wiki-agent (via the
