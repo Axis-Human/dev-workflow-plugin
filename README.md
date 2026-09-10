@@ -15,12 +15,10 @@ Skills are reusable workflows invoked with a `/` command directly in Claude Code
 | **init-project**        | `/init-project`        | Scans the codebase and generates an `AGENTS.md` with the detected stack, structure, and dev commands. Run this first on any new project.                                                                                                                                                   |
 | **code-review**         | `/code-review`         | Two-phase code review: fast pre-commit checks (spec compliance, type safety, security) followed by a deep SOLID / KISS / DRY structural audit.                                                                                                                                             |
 | **a11y-auditor**        | `/a11y-auditor`        | Audits code or components for accessibility barriers against WCAG 2.2 (A, AA, AAA). Auto-detects web vs. mobile stack.                                                                                                                                                                     |
-| **feature-discovery**   | `/feature-discovery`   | Acts as a functional analyst to gather all feature requirements through structured questioning. Outputs a comprehensive spec and optionally creates a ClickUp ticket.                                                                                                                      |
 | **plan-expert**         | `/plan-expert`         | Takes a ClickUp ticket or a free-form description and breaks it into detailed, ordered subtasks using a structured 8-section template. Creates subtasks on the ClickUp ticket or as a local task list.                                                                                     |
 | **design-expert**       | `/design-expert`       | Scans the project for all design-related information (colors, typography, spacing, component patterns, dark mode, design system) and generates or updates a `DESIGN.md` file.                                                                                                              |
 | **design-system-docs**  | `/design-system-docs`  | Audits design system documentation. If Storybook is present, reviews its quality and suggests improvements. If not, produces a step-by-step plan to implement it.                                                                                                                          |
 | **design-system-setup** | `/design-system-setup` | End-to-end design system setup. Runs `design-expert` → `design-system-docs` → `plan-expert` in sequence to document the design system, audit or plan Storybook, and create all execution tasks in ClickUp or locally.                                                                      |
-| **planning-features**   | `/planning-features`   | End-to-end feature planning. Runs `feature-discovery` then `plan-expert` back to back — gathers requirements, creates a ClickUp ticket, and breaks it into an execution plan.                                                                                                              |
 | **create-draft-pr**     | `/create-draft-pr`     | Creates a GitHub PR with a fully auto-populated standardized template. Infers base branch, derives description from the diff, detects shared code impact, tags stakeholders from CODEOWNERS, and builds a concrete test plan. Designed to run without human input when called by an agent. |
 | **implement-task**      | `/implement-task`      | Implements a task end-to-end. Given a ClickUp ticket ID or description, reads project context, plans at the file level, writes the code, runs automated checks + `code-review`, applies fixes, commits, and opens a PR via `create-draft-pr`.                                              |
 
@@ -38,8 +36,7 @@ Agents follow an **orchestrator → sub-agent** architecture. The `orchestrator-
 
 | Agent                         | Activated when                                                                                           |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------- |
-| **planning-features-agent**   | `new_feature` intent — coordinates discovery + planning end-to-end.                                      |
-| **feature-discovery-agent**   | Called by `planning-features-agent` — structured requirement interviews → FEATURE_SPEC + ClickUp ticket. |
+| **planning-features-agent**   | `new_feature` intent — structured requirement interviews → FEATURE_SPEC + ClickUp ticket.                |
 | **plan-expert-agent**         | `quick_task`, `refactor`, or after discovery — decomposes specs into 8-section subtasks.                 |
 | **implement-task-agent**      | `implementation` intent or after planning — writes code, runs review, commits, opens PR.                 |
 | **design-system-setup-agent** | `design_system` intent — design-expert → design-system-docs → plan-expert pipeline.                      |
@@ -170,12 +167,6 @@ All skills accept optional arguments. Run without arguments and the skill will a
 # Audit for WCAG AAA compliance
 /a11y-auditor --level AAA
 
-# Start a feature discovery session
-/feature-discovery
-
-# Start with an initial idea
-/feature-discovery --description "Allow users to export reports as PDF"
-
 # Plan from a ClickUp ticket
 /plan-expert --ticket-id abc123xyz
 
@@ -190,9 +181,6 @@ All skills accept optional arguments. Run without arguments and the skill will a
 
 # Full design system setup (design-expert + design-system-docs + plan-expert)
 /design-system-setup
-
-# Full feature planning session (feature-discovery + plan-expert)
-/planning-features
 
 # Create a PR with auto-populated template from the current branch diff
 /create-draft-pr
@@ -272,8 +260,7 @@ axis-human-ai-toolbox/
 │   └── plugin.json                      # Plugin metadata
 ├── agents/
 │   ├── orchestrator-agent.md            # Default entry point — routes all intents
-│   ├── planning-features-agent.md       # Sub-agent: discovery + planning pipeline
-│   ├── feature-discovery-agent.md       # Sub-agent: requirement interviews
+│   ├── planning-features-agent.md       # Sub-agent: requirement discovery interviews
 │   ├── plan-expert-agent.md             # Sub-agent: technical decomposition
 │   ├── implement-task-agent.md          # Sub-agent: code + PR delivery
 │   ├── design-system-setup-agent.md     # Sub-agent: design system pipeline
@@ -293,15 +280,11 @@ axis-human-ai-toolbox/
 │   │   └── SKILL.md
 │   ├── design-system-setup/
 │   │   └── SKILL.md
-│   ├── feature-discovery/
-│   │   └── SKILL.md
 │   ├── implement-task/
 │   │   └── SKILL.md
 │   ├── init-project/
 │   │   └── SKILL.md
-│   ├── plan-expert/
-│   │   └── SKILL.md
-│   └── planning-features/
+│   └── plan-expert/
 │       └── SKILL.md
 └── README.md
 ```

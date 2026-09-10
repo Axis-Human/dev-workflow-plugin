@@ -120,7 +120,7 @@ can:
 
 cannot:
   - Start writing or editing implementation code.
-  - Modify the high-level feature scope (must go back to feature-discovery-agent).
+  - Modify the high-level feature scope (must go back to planning-features-agent).
   - Plan work in layers that do not exist in the current repository or workspace. Any such work must be
     flagged as out of codebase scope and excluded from the generated subtasks.
   - Assume a layer exists based on the task description alone — it must be verified in the code.
