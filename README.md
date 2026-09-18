@@ -359,6 +359,82 @@ axis-human-ai-toolbox/
 
 ---
 
+## Usage telemetry
+
+The plugin can report what each turn actually cost — tokens, model, wall time,
+which sub-agent ran, and against which ClickUp ticket — to the AH Dashboard, so
+the numbers can be optimised instead of guessed at.
+
+**There is nothing to set up.** Install the plugin and it works — no token to
+paste, no variable to export, no file to edit.
+
+### How a machine gets permission
+
+This repo is public, so it carries no secret: a credential in a public repo is
+not a credential. Instead each machine generates its own the first time it runs
+— 32 random bytes in `~/.claude/ai-usage/device.json`, mode 0600 — and presents
+it on every request.
+
+Generating one is not the same as being allowed to use it:
+
+1. The machine reports for the first time and is parked as **pending**. Nothing
+   it sends is stored.
+2. It shows up under **Uso de IA** in the dashboard, labelled with its GitHub
+   login and hostname, with a badge on the nav item so the queue is visible.
+3. Someone approves it once. From then on its records land — **including
+   everything it reported while waiting**, which the collector kept in its
+   spool.
+
+Blocking a machine there stops it for good: it is told 403, writes a local
+marker and stops collecting altogether rather than retrying forever.
+
+Optionally pin a ticket by hand when the branch does not carry one:
+
+```sh
+export AI_TELEMETRY_TICKET='86abc9xyz'
+```
+
+### What is collected
+
+| Field | Source |
+|---|---|
+| Tokens (in, out, cache read, cache creation, thinking) | The session transcript's `usage` block |
+| Model, and every model a turn touched | Same |
+| Wall time, tool call count | Hook timestamps, `tool_use` blocks |
+| Sub-agent name and its own token usage | `SubagentStop` + that agent's transcript |
+| Cost in USD, lines added/removed | Claude Code's own `cost-state` at session end |
+| GitHub account of the machine | `gh auth status`, cached for a day |
+| ClickUp ticket | Branch name, or an id named in the prompt, or `AI_TELEMETRY_TICKET` |
+| Prompt length and SHA-256 | The prompt — **the text itself is never collected** |
+
+Prompt text is deliberately excluded. The dashboard is readable without a login,
+and a prompt can carry client data, credentials or proprietary code. Length and
+hash answer "which turn was expensive" and "is this the same prompt again"
+without holding content.
+
+Work with no detectable ticket is still recorded, with a null ticket. Filtering
+it out would make untracked spend — usually the largest slice — invisible.
+
+### How it behaves when things break
+
+- **Endpoint down, or machine not approved yet**: records spool to
+  `~/.claude/ai-usage/` and the next flush retries them, oldest first. The turn
+  never waits on the network — the POST happens in a detached child.
+- **Never blocks a session**: every path exits 0. Errors go to
+  `~/.claude/ai-usage/collector.log`, never to stdout, because on
+  `UserPromptSubmit` stdout is injected into the model's context.
+- **Server gone for a long time**: the spool stops growing past 5 MB rather than
+  filling the disk.
+- **Retries do not double-count**: the dashboard upserts on `(session_id,
+  prompt_id)` for turns and on `agent_id` for sub-agent runs.
+
+### Reading the numbers
+
+The dashboard serves the report at `/ai-usage/<AI_USAGE_REPORT_TOKEN>` — no
+login, so the link can be shared, but unguessable and `noindex`. That token only
+reads: writing is gated by per-machine approval, so sharing the report can never
+hand out permission to write to it.
+
 ## MCP servers
 
 | Server            | Type  | Purpose                                                                                             |
