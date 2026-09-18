@@ -182,7 +182,7 @@ install_claude_code() {
   echo ""
   echo "Claude Code install complete."
   echo "  Plugin : axis-human-ai-toolbox"
-  echo "  Hooks  : bundled with the plugin (UserPromptSubmit, SubagentStart, PreToolUse guard)"
+  echo "  Hooks  : bundled with the plugin (UserPromptSubmit router, SubagentStart, PreToolUse guard)"
 }
 
 # ---------------------------------------------------------------------------

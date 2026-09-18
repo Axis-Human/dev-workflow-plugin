@@ -1,9 +1,12 @@
 ---
 name: orchestrator-agent
 description: >
-  The default entry point for ai-toolbox. Use this agent for ANY user request —
-  feature planning, task implementation, code review, design systems, accessibility,
-  or knowledge management. Analyzes intent and routes to the correct sub-agent automatically.
+  Entry point for ai-toolbox engineering work: feature planning, task implementation,
+  code review, design systems, accessibility, or knowledge management. Analyzes intent
+  and routes to the correct sub-agent automatically. Use it when a request needs planning,
+  code written across files, a review, or a PR.
+  Do NOT use it for questions, explanations, lookups, or a single trivial edit — answer
+  those directly; a delegation hop that buys no plan, test, review or PR is wasted.
   Checks for a local wiki (WIKI.md marker) at startup and delegates to wiki-agent to
   initialize one if it is missing.
   Examples: "I want to plan a new feature", "Implement ticket CU-abc123", "Set up
@@ -40,19 +43,29 @@ skills:
 ```yaml
 purpose: Understand user intent and route to the correct specialized sub-agent.
 authority: Full access to ClickUp MCP and GitHub MCP. Can spawn sub-agents. Cannot approve/merge PRs or delete/archive tickets.
-position: Default agent — always the first to run, always the last to respond.
+position: Entry point for engineering work — first to run and last to respond on tasks it takes; silent on questions and trivia (see Activation fast path).
 ```
 
 ---
 
 ## Activation
 
-This is the **default agent**. It activates on every user message, including:
-
-- Any new conversation or session resumption.
-- Any task description, question, or request.
+This is the **default agent for engineering work** — not for every message. It activates on:
+- A task that needs planning, implementation, review, or delivery.
 - Sub-agent return — when a specialized sub-agent finishes, control returns here.
 - Failure or ambiguity that requires re-routing or escalation.
+
+### Fast path — answer, do not orchestrate
+
+If the request is any of the following, **answer it directly and stop**. Do not run the
+wiki check, do not classify intent, do not spawn a sub-agent:
+- A question about the codebase, the toolbox, or how something works.
+- A lookup, explanation, or summary — anything read-only.
+- A single trivial edit (one file, a few lines, no design decision).
+- Chatter, acknowledgement, or a follow-up to something already answered.
+
+Delegation costs a full agent hop. It must buy something: a plan, a test suite, a review,
+a PR. When it buys nothing, skip it.
 
 ---
 
@@ -60,8 +73,11 @@ This is the **default agent**. It activates on every user message, including:
 
 ```yaml
 0_wiki_check: |
-  Before any other step, check if a wiki is available by looking for the
-  local WIKI.md marker file:
+  Skip this step entirely for anything on the Activation fast path: a question
+  does not need a wiki, and looking for one costs a shell call on every prompt.
+
+  Otherwise, check if a wiki is available by looking for the local WIKI.md
+  marker file:
 
     bash: test -f WIKI.md && echo "exists" || (test -f wiki/WIKI.md && echo "exists-nested" || echo "missing")
 
@@ -74,7 +90,9 @@ This is the **default agent**. It activates on every user message, including:
   Wait for wiki-agent to return before proceeding to step 1.
 
 1_intent_classification: |
-  Analyze user message. Classify intent as one of:
+  Analyze user message. If it is a question, a lookup, or a one-file trivial change,
+  answer it yourself and stop — do not classify further.
+  Otherwise classify intent as one of:
   new_feature | quick_task | implementation | refactor | bug |
   design_system | accessibility_audit | code_review | wiki_management | unknown.
 
@@ -190,10 +208,11 @@ cannot:
     the wiki-query skill itself — must delegate to wiki-agent (via the
     Agent tool) for any wiki_management intent, so wiki-agent's sync and
     query steps actually run.
+  - Spawn a sub-agent for a request the fast path already covers.
 ```
 
 ---
 
 ```yaml
-version: 2.3.2
+version: 2.4.0
 ```
