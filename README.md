@@ -4,6 +4,41 @@ A Claude Code plugin with a curated set of skills and agents for software teams.
 
 ---
 
+## How the network fits together
+
+![Red de agentes](docs/red-agentes.png)
+
+A prompt meets three gates on its way to a pull request, and each one exists to
+stop a specific waste:
+
+- **Router** (`orchestrator-router.js`, a `UserPromptSubmit` hook) reads the
+  prompt and stays out of the way for questions, lookups and one-line edits.
+  Without it every "hola" bought a full agent hop that produced no plan, no
+  test and no PR.
+- **Guard** (`orchestrator-guard.js`, a `PreToolUse` hook) intercepts the
+  orchestrator's own writes, so routing work and doing work stay separate
+  jobs.
+- **Reviewer** (`reviewer-agent`) reads the diff with no stake in having
+  written it, and can send the work back before a PR exists.
+
+The spine is `plan-expert-agent` → `quality-assurance-agent` →
+`implement-task-agent` → `reviewer-agent` → `create-draft-pr`, and the
+orchestrator picks which part of it a request enters through — a bug skips
+straight to `bugfixer-agent`, an already-planned task skips the planning hop.
+The nine routes are in the agent's own routing table.
+
+Two things the diagram leaves out to stay readable: `wiki-agent`, which the
+orchestrator consults for project context on any route, and
+`design-system-setup-agent`, which owns its own single-hop sequence. The
+telemetry hooks that measure all of this are described under
+[Usage telemetry](#usage-telemetry).
+
+The diagram is generated, not drawn by hand: `docs/red-agentes.workflow.json`
+is the source, and `docs/red-agentes.html` is the same diagram as an
+explorable page with search, focus and relationship tracing.
+
+---
+
 ## What's inside
 
 ### Skills
@@ -258,6 +293,10 @@ Each step hands off to the next: the planner saves a Markdown plan, the generato
 axis-human-ai-toolbox/
 ├── .claude-plugin/
 │   └── plugin.json                      # Plugin metadata
+├── docs/
+│   ├── red-agentes.workflow.json        # Source of the network diagram
+│   ├── red-agentes.png                  # Rendered diagram, embedded in this README
+│   └── red-agentes.html                 # Same diagram, explorable
 ├── agents/
 │   ├── orchestrator-agent.md            # Default entry point — routes all intents
 │   ├── planning-features-agent.md       # Sub-agent: requirement discovery interviews
@@ -286,6 +325,11 @@ axis-human-ai-toolbox/
 │   │   └── SKILL.md
 │   └── plan-expert/
 │       └── SKILL.md
+├── hooks/
+│   ├── hooks.json                       # Which hook runs on which event
+│   ├── orchestrator-router.js           # UserPromptSubmit: delegate only real work
+│   ├── orchestrator-guard.js            # PreToolUse: keep the orchestrator from writing
+│   └── telemetry.js                     # Turn/agent/session usage → dashboard
 └── README.md
 ```
 

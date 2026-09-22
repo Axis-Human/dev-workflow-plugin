@@ -1,0 +1,256 @@
+{
+  "schema_version": 1,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Red de agentes — axis-human-ai-toolbox",
+    "quality_profile": "showcase",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "frontend": {
+          "label": "Respuesta al usuario"
+        },
+        "backend": {
+          "label": "Agente"
+        },
+        "security": {
+          "label": "Portón"
+        },
+        "cloud": {
+          "label": "Entrega"
+        }
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": "entrada",
+      "label": "Entrada (hooks)"
+    },
+    {
+      "id": "orquestacion",
+      "label": "Orquestación"
+    },
+    {
+      "id": "construccion",
+      "label": "Construcción"
+    },
+    {
+      "id": "calidad",
+      "label": "Calidad"
+    },
+    {
+      "id": "entrega",
+      "label": "Entrega"
+    }
+  ],
+  "phases": [
+    {
+      "id": "clasificar",
+      "label": "Clasificar",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "construir",
+      "label": "Construir",
+      "fromCol": 2,
+      "toCol": 4,
+      "variant": "emphasis"
+    },
+    {
+      "id": "entregar",
+      "label": "Entregar",
+      "fromCol": 5,
+      "toCol": 5
+    }
+  ],
+  "mainPath": [
+    "router",
+    "orquestador",
+    "plan",
+    "qa",
+    "implementacion",
+    "revision"
+  ],
+  "nodes": [
+    {
+      "id": "router",
+      "lane": "entrada",
+      "col": 0,
+      "type": "security",
+      "label": "Router",
+      "sublabel": "hook de prompt",
+      "width": 96
+    },
+    {
+      "id": "directo",
+      "lane": "entrada",
+      "col": 2,
+      "type": "frontend",
+      "label": "Respuesta directa",
+      "sublabel": "preguntas y lookups",
+      "width": 200
+    },
+    {
+      "id": "orquestador",
+      "lane": "orquestacion",
+      "col": 1,
+      "type": "backend",
+      "label": "Orquestador",
+      "sublabel": "orchestrator-agent",
+      "tag": "9 rutas",
+      "width": 130
+    },
+    {
+      "id": "guard",
+      "lane": "orquestacion",
+      "col": 3,
+      "type": "security",
+      "label": "Guard de escritura",
+      "sublabel": "intercepta sus escrituras",
+      "tag": "hook",
+      "width": 180
+    },
+    {
+      "id": "plan",
+      "lane": "construccion",
+      "col": 2,
+      "type": "backend",
+      "label": "Plan",
+      "sublabel": "plan-expert-agent",
+      "width": 180
+    },
+    {
+      "id": "implementacion",
+      "lane": "construccion",
+      "col": 4,
+      "type": "backend",
+      "label": "Implementación",
+      "sublabel": "implement-task-agent",
+      "width": 180
+    },
+    {
+      "id": "qa",
+      "lane": "calidad",
+      "col": 3,
+      "type": "backend",
+      "label": "Tests primero",
+      "sublabel": "quality-assurance-agent",
+      "width": 200
+    },
+    {
+      "id": "revision",
+      "lane": "calidad",
+      "col": 5,
+      "type": "security",
+      "label": "Revisión",
+      "sublabel": "reviewer-agent",
+      "width": 110
+    },
+    {
+      "id": "pr",
+      "lane": "entrega",
+      "col": 5,
+      "type": "cloud",
+      "label": "PR borrador",
+      "sublabel": "create-draft-pr",
+      "width": 110
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-router-directo",
+      "from": "router",
+      "to": "directo",
+      "role": "branch",
+      "label": "pregunta o lookup",
+      "route": "straight",
+      "labelDy": -18
+    },
+    {
+      "id": "e-router-orq",
+      "from": "router",
+      "to": "orquestador",
+      "role": "main",
+      "label": "trabajo real"
+    },
+    {
+      "id": "e-orq-plan",
+      "from": "orquestador",
+      "to": "plan",
+      "role": "main",
+      "label": "delega",
+      "labelDy": 14
+    },
+    {
+      "id": "e-orq-guard",
+      "from": "orquestador",
+      "to": "guard",
+      "role": "branch",
+      "route": "straight"
+    },
+    {
+      "id": "e-guard-impl",
+      "from": "guard",
+      "to": "implementacion",
+      "role": "branch",
+      "label": "obliga a delegar",
+      "labelDy": 16
+    },
+    {
+      "id": "e-plan-qa",
+      "from": "plan",
+      "to": "qa",
+      "role": "main"
+    },
+    {
+      "id": "e-qa-impl",
+      "from": "qa",
+      "to": "implementacion",
+      "role": "main",
+      "label": "tests en rojo"
+    },
+    {
+      "id": "e-impl-rev",
+      "from": "implementacion",
+      "to": "revision",
+      "role": "main"
+    },
+    {
+      "id": "e-rev-impl",
+      "from": "revision",
+      "to": "implementacion",
+      "role": "error",
+      "label": "bloquea",
+      "labelDx": -52
+    },
+    {
+      "id": "e-rev-pr",
+      "from": "revision",
+      "to": "pr",
+      "role": "main",
+      "label": "aprueba"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Qué evita cada portón",
+      "items": [
+        "Router: que una pregunta pague un hop de agente completo",
+        "Guard: que el orquestador escriba código en vez de delegar",
+        "Revisión: que un PR salga sin una lectura independiente"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Telemetría, alrededor de todo esto",
+      "items": [
+        "Tokens, modelo, duración y agente, por ticket de ClickUp",
+        "El texto del prompt nunca se guarda: solo largo y hash",
+        "Una máquina nueva no escribe hasta que alguien la aprueba"
+      ]
+    }
+  ]
+}
