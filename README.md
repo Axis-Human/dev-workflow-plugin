@@ -6,7 +6,7 @@ A Claude Code plugin with a curated set of skills and agents for software teams.
 
 ## How the network fits together
 
-![Red de agentes](docs/red-agentes.png)
+![Agent network](docs/agent-network.png)
 
 A prompt meets three gates on its way to a pull request, and each one exists to
 stop a specific waste:
@@ -33,8 +33,8 @@ orchestrator consults for project context on any route, and
 telemetry hooks that measure all of this are described under
 [Usage telemetry](#usage-telemetry).
 
-The diagram is generated, not drawn by hand: `docs/red-agentes.workflow.json`
-is the source, and `docs/red-agentes.html` is the same diagram as an
+The diagram is generated, not drawn by hand: `docs/agent-network.workflow.json`
+is the source, and `docs/agent-network.html` is the same diagram as an
 explorable page with search, focus and relationship tracing.
 
 ---
@@ -294,9 +294,9 @@ axis-human-ai-toolbox/
 ├── .claude-plugin/
 │   └── plugin.json                      # Plugin metadata
 ├── docs/
-│   ├── red-agentes.workflow.json        # Source of the network diagram
-│   ├── red-agentes.png                  # Rendered diagram, embedded in this README
-│   └── red-agentes.html                 # Same diagram, explorable
+│   ├── agent-network.workflow.json      # Source of the network diagram
+│   ├── agent-network.png                # Rendered diagram, embedded in this README
+│   └── agent-network.html               # Same diagram, explorable
 ├── agents/
 │   ├── orchestrator-agent.md            # Default entry point — routes all intents
 │   ├── planning-features-agent.md       # Sub-agent: requirement discovery interviews
