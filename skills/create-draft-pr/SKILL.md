@@ -1,6 +1,6 @@
 ---
 name: create-draft-pr
-description: Creates a GitHub pull request (always as Draft, no exceptions) auto-populated from the repo's `templates/pull_request_template.md`. Infers base branch, title, and every section from git context (diff, commits, branch name, CODEOWNERS). Uses gh CLI first, GitHub MCP as fallback. Runs without human input when `--auto` is passed or called by another skill/agent.
+description: Creates a GitHub pull request (always as Draft, no exceptions) auto-populated from the project's own PR template when it has one, and from the agency default shipped with the plugin otherwise. Infers base branch, title, and every section from git context (diff, commits, branch name, CODEOWNERS). Uses gh CLI first, GitHub MCP as fallback. Runs without human input when `--auto` is passed or called by another skill/agent.
 argument-hint: [--base <branch>] [--ticket-id <id>] [--auto]
 allowed-tools: Bash AskUserQuestion mcp__github__create_pull_request mcp__github__list_branches
 effort: low
@@ -41,7 +41,16 @@ Example: `feat/CU-123-user-auth` → `[Feature] User auth (CU-123)`.
 
 ## 5. Populate the template
 
-Read `templates/pull_request_template.md` at the repo root and use it verbatim as the skeleton — do not add or remove sections. Derive each section from Step 2's git context:
+Read the PR template and use it verbatim as the skeleton — do not add or remove sections.
+Look for it in this order, and use the first one that exists:
+
+1. `templates/pull_request_template.md` or `.github/pull_request_template.md` in the
+   project being worked on — a repo that ships its own template wins.
+2. `<skill dir>/../../templates/pull_request_template.md`, the agency default that
+   ships with the plugin. `<skill dir>` is this skill's own directory, announced when
+   it loaded; it is not the working directory.
+
+If neither can be read, stop and say so instead of inventing a structure. Derive each section from Step 2's git context:
 
 - **Description 📝** — 2-4 bullets covering why + what, each starting with `add`/`update`/`fix`/`refactor`/`delete`. Rewrite commit messages as intent statements; reference real function/component/route names.
 - **Module** — extract `M{N}` and `S{N}` from branch name/commits (patterns like `M1`, `migration-1`, `S12`, `sprint-12`). Use `<!-- TBD -->` if absent — never invent.

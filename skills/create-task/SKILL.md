@@ -62,17 +62,25 @@ If the input is ambiguous between two types (e.g., IMP vs US), state your classi
 
 ## Step 3 — Read the Corresponding Template
 
-Based on the classified type, read the template file:
+The templates ship with the plugin, so they are **not** in the project you are
+working on. Resolve every path below against this skill's own directory — the
+absolute path announced when this skill loaded — and never against the working
+directory. From `<skill dir>`, the templates live at `../../templates/clickup/`.
 
 | Type | Template file |
 |---|---|
-| `[US]` | `templates/clickup/us_task_template.md` |
-| `[BUG]` | `templates/clickup/bug_task_template.md` |
-| `[IMP]` | `templates/clickup/imp_task_template.md` |
-| `[TASK]` | `templates/clickup/task_task_template.md` |
-| `[SPIKE]` | `templates/clickup/spike_task_template.md` |
+| `[US]` | `<skill dir>/../../templates/clickup/us_task_template.md` |
+| `[BUG]` | `<skill dir>/../../templates/clickup/bug_task_template.md` |
+| `[IMP]` | `<skill dir>/../../templates/clickup/imp_task_template.md` |
+| `[TASK]` | `<skill dir>/../../templates/clickup/task_task_template.md` |
+| `[SPIKE]` | `<skill dir>/../../templates/clickup/spike_task_template.md` |
 
-Use the `Read` tool to load the template. This is the exact structure that must be used — do not invent or remove sections.
+Use the `Read` tool to load the template. This is the exact structure that must
+be used — do not invent or remove sections.
+
+**If the file cannot be read, stop and say so.** Do not reconstruct the template
+from memory: a ticket that looks right but carries invented sections is worse
+than no ticket, because nothing downstream will notice.
 
 ---
 

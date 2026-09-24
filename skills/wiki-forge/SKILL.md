@@ -37,11 +37,17 @@ With that:
 
 1. Create the folder structure (see Architecture below).
 2. Move the user's sources into `raw/`.
-3. Generate `WIKI.md` at the root — use `templates/wiki/wiki-md-template.md`
-   substituting all `{{}}` placeholders.
+3. Generate `WIKI.md` at the root — use
+   `<skill dir>/../../templates/wiki/wiki-md-template.md` substituting all
+   `{{}}` placeholders.
 4. Generate `.claude/wiki-conventions.md` — use
-   `templates/wiki/conventions-template.md` substituting `{{VAULT_NAME}}` and
-   `{{LANGUAGE}}` with the vault's values.
+   `<skill dir>/../../templates/wiki/conventions-template.md` substituting
+   `{{VAULT_NAME}}` and `{{LANGUAGE}}` with the vault's values.
+
+Both templates ship with the plugin, so `<skill dir>` means this skill's own
+directory — the absolute path announced when it loaded — never the working
+directory. If a template cannot be read, stop and say so rather than writing a
+vault from memory.
 5. Create empty `wiki/index.md` and `wiki/log.md`.
 
 > **Tip:** For a guided setup, use `/wiki-init` to create a new wiki from scratch, or `/wiki-connect` to attach an existing one.

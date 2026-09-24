@@ -203,7 +203,8 @@ mkdir -p raw/[repo.name]
 
 If `CLAUDE.md` already exists with project content (not the framework's default), skip this step.
 
-Read `templates/wiki/wiki-md-template.md` and replace:
+Read `<skill dir>/../../templates/wiki/wiki-md-template.md` — relative to this
+skill's own directory, not the working directory — and replace:
 
 - `{{VAULT_NAME}}` → `VAULT_NAME`
 - `{{PROJECT_DESCRIPTION}}` → 1-2 sentence description inferred from project type and name, written in `LANGUAGE`
@@ -231,7 +232,8 @@ Write all prose in `LANGUAGE`. Write the result to `CLAUDE.md`.
 
 If `.claude/wiki-conventions.md` already exists, skip this step.
 
-Read `templates/wiki/conventions-template.md` and replace:
+Read `<skill dir>/../../templates/wiki/conventions-template.md` — relative to
+this skill's own directory, not the working directory — and replace:
 - `{{VAULT_NAME}}` → `VAULT_NAME`
 - `{{LANGUAGE}}` → `LANGUAGE`
 

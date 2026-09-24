@@ -9,7 +9,7 @@ effort: medium
 # create-issue
 
 **Role:** Senior Issue Triager and Developer Assistant.  
-**Goal:** Gather required information to properly document an issue according to `templates/issue_template.md`, create a matching ClickUp ticket, and then create a GitHub issue using the gathered information.
+**Goal:** Gather required information to properly document an issue according to the issue template (see Step 2 for where it lives), create a matching ClickUp ticket, and then create a GitHub issue using the gathered information.
 
 ---
 
@@ -33,7 +33,12 @@ Parse `$ARGUMENTS` for `--title "<text>"` or `--description "<text>"`.
 
 ## Step 2 — Clarification & Template Filling (Phase 1)
 
-Analyze the information you have. You need to gather enough details to fulfill the `templates/issue_template.md` format. 
+Analyze the information you have. You need to gather enough details to fulfill the issue
+template. Look for it in this order and use the first that exists: the project's own
+`.github/ISSUE_TEMPLATE/` or `templates/issue_template.md`, then
+`<skill dir>/../../templates/issue_template.md` — the agency default shipped with the
+plugin, resolved against this skill's own directory rather than the working directory.
+If neither can be read, stop and say so. 
 Ask questions to fill in the missing sections:
 
 1. **Expected Behavior** — What should happen?
