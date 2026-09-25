@@ -62,23 +62,25 @@ If the input is ambiguous between two types (e.g., IMP vs US), state your classi
 
 ## Step 3 — Read the Corresponding Template
 
-The templates ship with the plugin, so they are **not** in the project you are
-working on. Resolve every path below against this skill's own directory — the
-absolute path announced when this skill loaded — and never against the working
-directory. From `<skill dir>`, the templates live at `../../templates/clickup/`.
+Read the template that matches the classified type and use it verbatim as the
+skeleton — do not invent or remove sections. Look for it in this order, and use
+the first one that exists:
+
+1. `templates/clickup/<type>_task_template.md` in the project being worked on —
+   a repo that ships its own template wins.
+2. `<skill dir>/../../templates/clickup/<type>_task_template.md`, the agency
+   default that ships with the plugin. `<skill dir>` is this skill's own
+   directory, announced when it loaded; it is not the working directory.
 
 | Type | Template file |
 |---|---|
-| `[US]` | `<skill dir>/../../templates/clickup/us_task_template.md` |
-| `[BUG]` | `<skill dir>/../../templates/clickup/bug_task_template.md` |
-| `[IMP]` | `<skill dir>/../../templates/clickup/imp_task_template.md` |
-| `[TASK]` | `<skill dir>/../../templates/clickup/task_task_template.md` |
-| `[SPIKE]` | `<skill dir>/../../templates/clickup/spike_task_template.md` |
+| `[US]` | `us_task_template.md` |
+| `[BUG]` | `bug_task_template.md` |
+| `[IMP]` | `imp_task_template.md` |
+| `[TASK]` | `task_task_template.md` |
+| `[SPIKE]` | `spike_task_template.md` |
 
-Use the `Read` tool to load the template. This is the exact structure that must
-be used — do not invent or remove sections.
-
-**If the file cannot be read, stop and say so.** Do not reconstruct the template
+**If neither can be read, stop and say so.** Do not reconstruct the template
 from memory: a ticket that looks right but carries invented sections is worse
 than no ticket, because nothing downstream will notice.
 
