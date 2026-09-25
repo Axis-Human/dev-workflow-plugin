@@ -4,7 +4,7 @@ description: >
   Classifies user intent and launches the appropriate workflow pipeline or
   specialized agent/skill. The central router for all ai-toolbox engineering
   work — handles wiki setup, context gathering, branch creation, and dispatch.
-argument-hint: [<task description or ticket ID>]
+argument-hint: "<task description or ticket ID>"
 allowed-tools: Workflow Agent Skill Bash Read AskUserQuestion mcp__clickup__clickup_get_task mcp__clickup__clickup_get_workspace_hierarchy
 effort: medium
 ---
@@ -31,11 +31,25 @@ When it buys nothing, skip it.
 ## Workflow
 
 ```yaml
-0_resolve_paths: |
-  Find the plugin's workflow directory. Run exactly:
-    bash: find ~/.claude -path "*/axis-human-ai-toolbox/workflows" -type d 2>/dev/null | head -1
-  Store the result as WORKFLOW_DIR. If the UserPromptSubmit hook already
-  provided a scriptPath in its additional context, use that instead.
+0_install_workflows: |
+  The Workflow tool can only read scripts from the working directory.
+  Copy the plugin's workflow scripts into the project's .claude/workflows/
+  so the Workflow tool can find them. Run exactly:
+
+    bash: |
+      PLUGIN_WF="$(find ~/.claude -path "*/axis-human-ai-toolbox/workflows" -type d 2>/dev/null | head -1)"
+      if [ -n "$PLUGIN_WF" ]; then
+        mkdir -p .claude/workflows
+        for f in "$PLUGIN_WF"/*.js; do
+          cp -u "$f" .claude/workflows/ 2>/dev/null || cp "$f" .claude/workflows/
+        done
+        echo "synced"
+      else
+        echo "plugin-not-found"
+      fi
+
+  If "plugin-not-found": warn the user that the axis-human-ai-toolbox plugin
+  may not be installed and stop.
 
 1_wiki_check: |
   Skip for anything on the fast path.
@@ -79,19 +93,20 @@ When it buys nothing, skip it.
 
 ### Multi-step routes → Workflow pipelines
 
-These intents run as deterministic workflow scripts via the Workflow tool:
+These intents run as deterministic workflow scripts via the Workflow tool.
+After step 0 copies them, they live at `.claude/workflows/` in the project.
 
 | Intent | Script | Pipeline |
 |---|---|---|
-| `quick_task` | `WORKFLOW_DIR/quick-task.js` | plan → test → implement → review → PR |
-| `implementation` | `WORKFLOW_DIR/implement.js` | test → implement → review → PR |
-| `refactor` | `WORKFLOW_DIR/refactor.js` | plan → implement → review → PR |
-| `bug` | `WORKFLOW_DIR/bug-fix.js` | reproduce → fix → review → PR |
+| `quick_task` | `quick-task.js` | plan → test → implement → review → PR |
+| `implementation` | `implement.js` | test → implement → review → PR |
+| `refactor` | `refactor.js` | plan → implement → review → PR |
+| `bug` | `bug-fix.js` | reproduce → fix → review → PR |
 
 Call pattern:
 ```
 Workflow({
-  scriptPath: "WORKFLOW_DIR/<script>",
+  scriptPath: ".claude/workflows/<script>",
   args: {
     description: "<user request>",
     ticketId: "<CU-xxx if present>",
@@ -126,6 +141,7 @@ can:
   - Fetch ClickUp ticket details for context.
   - Ask one clarifying question when intent is ambiguous.
   - Initialize the project wiki if missing.
+  - Copy workflow scripts into the project for local use.
 
 cannot:
   - Write implementation code directly — dispatch to a workflow.

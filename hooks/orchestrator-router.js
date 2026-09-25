@@ -12,8 +12,6 @@
 //
 // Tech-agnostic and language-aware (ES/EN), since prompts arrive in both.
 
-const path = require('path');
-
 const MAX_TRIVIAL_CHARS = 120;  // chatter / lookup ceiling
 const MAX_ONELINER_CHARS = 60;  // "one small edit" ceiling
 
@@ -41,8 +39,6 @@ const REFACTOR_INTENT =
 const IMPLEMENT_INTENT =
   /\b(implement(a|ar|á|e|o|ing)?|the plan|el plan|subtask|subtarea|already planned|ya planificado)/i;
 
-const pluginRoot = path.resolve(__dirname, '..');
-
 let raw = '';
 process.stdin.on('data', c => (raw += c));
 process.stdin.on('end', () => {
@@ -68,7 +64,6 @@ function contextFor(prompt) {
 
   var intent = classifyIntent(prompt);
   var workflowFile = intent + '.js';
-  var scriptPath = path.join(pluginRoot, 'workflows', workflowFile);
 
   if (tier === 'route') {
     return (
@@ -76,8 +71,8 @@ function contextFor(prompt) {
       'axis-human-ai-toolbox:orchestrate skill to classify the intent, set up ' +
       'the environment, and launch the appropriate workflow pipeline.\n\n' +
       'The router hook pre-classified the intent as: ' + intent + '\n' +
-      'Suggested workflow: ' + scriptPath + '\n\n' +
-      'Available workflows in ' + path.join(pluginRoot, 'workflows') + ':\n' +
+      'Suggested workflow script: ' + workflowFile + '\n\n' +
+      'Available workflows (copied to .claude/workflows/ by the skill):\n' +
       '  quick-task.js — plan → test → implement → review → PR\n' +
       '  implement.js  — test → implement → review → PR (plan already exists)\n' +
       '  refactor.js   — plan → implement → review → PR (behavior unchanged)\n' +
@@ -89,8 +84,7 @@ function contextFor(prompt) {
   // tier === 'suggest'
   return (
     'If this turns out to need planning, implementation across several files, or a PR, ' +
-    'consider invoking the axis-human-ai-toolbox:orchestrate skill. Workflow pipelines ' +
-    'are at: ' + path.join(pluginRoot, 'workflows') + '/\n' +
+    'consider invoking the axis-human-ai-toolbox:orchestrate skill.\n' +
     'For a question, a lookup, or a small local change, just answer or do it directly.'
   );
 }

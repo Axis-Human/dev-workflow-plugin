@@ -1,6 +1,6 @@
 # Dev Workflow — Claude Code Plugin
 
-A Claude Code plugin with a curated set of skills and agents for software teams. Covers accessibility auditing, code review, project initialization, design system documentation, and end-to-end feature planning workflows backed by ClickUp.
+A Claude Code plugin with skills, agents and deterministic workflow pipelines for software teams. Covers end-to-end task delivery (plan → test → implement → review → PR), accessibility auditing, code review, project initialization, design system documentation, and feature planning backed by ClickUp.
 
 ---
 
@@ -15,9 +15,9 @@ stop a specific waste:
   prompt and stays out of the way for questions, lookups and one-line edits.
   For engineering work it classifies the intent and suggests the right workflow
   pipeline.
-- **Guard** (`orchestrator-guard.js`, a `PreToolUse` hook) intercepts the
-  orchestrator's own writes, so routing work and doing work stay separate
-  jobs.
+- **Guard** (`orchestrator-guard.js`, a `PreToolUse` hook) defense-in-depth
+  write guard — keeps the routing layer from writing code directly, so
+  routing work and doing work stay separate jobs.
 - **Reviewer** (`reviewer-agent`) reads the diff with no stake in having
   written it, and can send the work back before a PR exists.
 
@@ -92,7 +92,7 @@ Agents are sub-agent definitions invoked by workflow pipelines (via `agentType`)
 
 ### Standalone agents (Playwright test automation)
 
-These three agents are **not** routed through the orchestrator. They form a self-contained end-to-end browser-testing pipeline and are invoked directly via `/agents` (or by naming them). They run against a live web app through the `playwright-test` MCP server.
+These three agents are **not** part of the workflow pipelines. They form a self-contained end-to-end browser-testing pipeline and are invoked directly via `/agents` (or by naming them). They run against a live web app through the `playwright-test` MCP server.
 
 | Agent                         | Role                                                                                                                                                                   |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -404,8 +404,8 @@ axis-human-ai-toolbox/
    ---
    name: my-agent
    description: >
-     Sub-agent: invoked only by the orchestrator-agent when [X intent] is detected.
-     [What it does]. Do not invoke directly.
+     Sub-agent: invoked by workflows or the orchestrate skill when [X intent]
+     is detected. [What it does]. Do not invoke directly.
    model: claude-opus-4-6
    color: blue
    effort: medium
@@ -418,16 +418,62 @@ axis-human-ai-toolbox/
      - skill-two
    ---
 
-   Agent orchestration instructions...
+   Agent instructions...
    ```
 
    **Important:** All agents in this plugin are sub-agents invoked by workflows or the
    `orchestrate` skill. New agents must be registered in the skill's routing table
-   (`skills/orchestrate/SKILL.md`) and in any workflow script that should use them.
+   (`skills/orchestrate/SKILL.md`) and in any workflow script that should use them
+   (update the `AGENTS` constant).
 
 3. Use the `skills` frontmatter field to preload skills. This ensures skills execute inline in the agent's context rather than being delegated to a subagent.
 
-> **Note:** If you want the workflow to also be available as a `/` command, create a matching skill under `skills/my-agent/SKILL.md` with `allowed-tools` instead of `tools` and the same body. Both files can coexist — the agent handles auto-selection, the skill handles direct invocation.
+> **Note:** If you want the agent to also be available as a `/` command, create a matching skill under `skills/my-agent/SKILL.md` with `allowed-tools` instead of `tools` and the same body. Both files can coexist — the agent handles workflow routing, the skill handles direct invocation.
+
+---
+
+## Adding a new workflow
+
+1. Create a new file under `workflows/`:
+
+   ```bash
+   touch workflows/my-workflow.js
+   ```
+
+2. Write the workflow script with a `meta` block and pipeline stages:
+
+   ```js
+   export const meta = {
+     name: 'my-workflow',
+     description: 'Short description shown in the permission dialog',
+     phases: [
+       { title: 'Phase 1', detail: 'What happens here' },
+       { title: 'Phase 2', detail: 'What happens here' },
+     ],
+   }
+
+   const AGENTS = {
+     myAgent: 'axis-human-ai-toolbox:my-agent',
+   }
+
+   phase('Phase 1')
+   var result = await agent('Task prompt...', {
+     agentType: AGENTS.myAgent,
+     phase: 'Phase 1',
+     label: 'my-agent',
+     schema: { type: 'object', properties: { ... }, required: [...] },
+   })
+
+   phase('Phase 2')
+   // ... next stage
+   return { status: 'success', result }
+   ```
+
+   Scripts are plain JavaScript (not TypeScript), run in an async context (`await`
+   and `return` work at top level), and use `agent()`, `phase()`, `log()`,
+   `parallel()`, and `pipeline()` as globals.
+
+3. Register the workflow in `skills/orchestrate/SKILL.md` under the routing table so the `orchestrate` skill knows when to dispatch to it.
 
 ---
 
