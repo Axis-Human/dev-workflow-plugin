@@ -13,25 +13,42 @@ stop a specific waste:
 
 - **Router** (`orchestrator-router.js`, a `UserPromptSubmit` hook) reads the
   prompt and stays out of the way for questions, lookups and one-line edits.
-  Without it every "hola" bought a full agent hop that produced no plan, no
-  test and no PR.
+  For engineering work it classifies the intent and suggests the right workflow
+  pipeline.
 - **Guard** (`orchestrator-guard.js`, a `PreToolUse` hook) intercepts the
   orchestrator's own writes, so routing work and doing work stay separate
   jobs.
 - **Reviewer** (`reviewer-agent`) reads the diff with no stake in having
   written it, and can send the work back before a PR exists.
 
-The spine is `plan-expert-agent` → `quality-assurance-agent` →
-`implement-task-agent` → `reviewer-agent` → `create-draft-pr`, and the
-orchestrator picks which part of it a request enters through — a bug skips
-straight to `bugfixer-agent`, an already-planned task skips the planning hop.
-The nine routes are in the agent's own routing table.
+### Workflow pipelines (v2.0)
 
-Two things the diagram leaves out to stay readable: `wiki-agent`, which the
-orchestrator consults for project context on any route, and
-`design-system-setup-agent`, which owns its own single-hop sequence. The
-telemetry hooks that measure all of this are described under
-[Usage telemetry](#usage-telemetry).
+Multi-step engineering routes now run as **deterministic Workflow scripts**
+instead of model-driven orchestrator delegation. Each script encodes a pipeline
+(e.g., plan → test → implement → review → PR) as plain JavaScript with
+structured schemas for data passing and a review retry loop.
+
+| Workflow | Pipeline | When |
+|---|---|---|
+| `quick-task.js` | plan → test → implement → review → PR | Well-defined task, often with a ticket ID |
+| `implement.js` | test → implement → review → PR | Plan already exists |
+| `refactor.js` | plan → implement → review → PR | Restructuring without behavior change |
+| `bug-fix.js` | reproduce → fix → review → PR | Bug reports and regressions |
+
+The scripts live in `workflows/` and are invoked via the `Workflow` tool:
+
+```
+Workflow({ scriptPath: "<plugin_root>/workflows/quick-task.js",
+           args: { description: "...", ticketId: "CU-xxx" } })
+```
+
+The router hook suggests the right workflow automatically. Single-hop routes
+(feature discovery, design system, code review, a11y audit, wiki) still use
+the Agent or Skill tool directly — a workflow adds no value for a single step.
+
+Each workflow references the plugin's agent definitions via `agentType` (e.g.,
+`axis-human-ai-toolbox:plan-expert-agent`), so the agents' full system prompts,
+skills, and tool access apply inside the pipeline.
 
 The diagram is generated, not drawn by hand: `docs/agent-network.workflow.json`
 is the source, and `docs/agent-network.html` is the same diagram as an
@@ -57,26 +74,21 @@ Skills are reusable workflows invoked with a `/` command directly in Claude Code
 | **create-draft-pr**     | `/create-draft-pr`     | Creates a GitHub PR with a fully auto-populated standardized template. Infers base branch, derives description from the diff, detects shared code impact, tags stakeholders from CODEOWNERS, and builds a concrete test plan. Designed to run without human input when called by an agent. |
 | **implement-task**      | `/implement-task`      | Implements a task end-to-end. Given a ClickUp ticket ID or description, reads project context, plans at the file level, writes the code, runs automated checks + `code-review`, applies fixes, commits, and opens a PR via `create-draft-pr`.                                              |
 
-### Agents
+### Agents (sub-agents invoked by workflows)
 
-Agents follow an **orchestrator → sub-agent** architecture. The `orchestrator-agent` is the only agent Claude auto-selects — it analyzes every user request and routes to the correct specialist sub-agent.
-
-### Orchestrator (default)
-
-| Agent                  | Role                                                                                                                                                 |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **orchestrator-agent** | **Default entry point.** Handles any user request by classifying intent and routing to the right sub-agent. Always runs first; always responds last. |
-
-### Sub-agents (invoked by orchestrator only)
+Agents are sub-agent definitions invoked by workflow pipelines (via `agentType`) or by the `orchestrate` skill for single-hop routes. There is no orchestrator agent — the `orchestrate` skill and workflow scripts handle all routing.
 
 | Agent                         | Activated when                                                                                           |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------- |
 | **planning-features-agent**   | `new_feature` intent — structured requirement interviews → FEATURE_SPEC + ClickUp ticket.                |
-| **plan-expert-agent**         | `quick_task`, `refactor`, or after discovery — decomposes specs into 8-section subtasks.                 |
-| **implement-task-agent**      | `implementation` intent or after planning — writes code, runs review, commits, opens PR.                 |
+| **plan-expert-agent**         | `quick_task`, `refactor` workflows — decomposes specs into 8-section subtasks.                           |
+| **quality-assurance-agent**   | `quick_task`, `implementation` workflows — writes failing tests (TDD red phase).                         |
+| **implement-task-agent**      | All multi-step workflows — writes code, runs review, commits.                                            |
+| **reviewer-agent**            | All multi-step workflows — independent code quality and security review gate.                            |
+| **bugfixer-agent**            | `bug` workflow — reproduces, isolates, and patches bugs with minimal scope.                              |
 | **design-system-setup-agent** | `design_system` intent — design-expert → design-system-docs → plan-expert pipeline.                      |
 
-> **How to use:** Just describe what you want in natural language. The orchestrator routes automatically. Use `/` skills for direct, one-off invocations when you know exactly which step to run.
+> **How to use:** Just describe what you want in natural language. The router hook and `orchestrate` skill route to the correct workflow automatically. Use `/` skills for direct, one-off invocations when you know exactly which step to run.
 
 ### Standalone agents (Playwright test automation)
 
@@ -230,23 +242,28 @@ All skills accept optional arguments. Run without arguments and the skill will a
 /implement-task --description "Add email validation to the signup form"
 ```
 
-### Agents
+### Workflow pipelines
 
-Agents are invoked by describing the task naturally — Claude Code selects the right agent automatically based on what you ask. They are also accessible via `/agents`.
+Describe the task in natural language and the router hook + `orchestrate` skill
+automatically launch the right workflow pipeline:
 
 ```
-# Feature planning
-"I want to plan a new feature"
-"Let's plan the user notification system"
-
-# Design system setup
-"Set up the design system for this project"
-"I want to document our design system and plan the Storybook work"
-
-# Task implementation
+# Quick task (plan → test → implement → review → PR)
 "Implement ticket CU-abc123"
 "Work on this task and open a PR when done"
+
+# Bug fix (reproduce → fix → review → PR)
+"The login endpoint returns 500 when the email contains a plus sign"
+
+# Refactor (plan → implement → review → PR)
+"Refactor the auth middleware to use the new session store"
+
+# Feature planning (single-hop — discovery interview)
+"I want to plan a new feature"
+"Let's plan the user notification system"
 ```
+
+You can also invoke the orchestrate skill directly: `/orchestrate`
 
 ### Playwright test automation workflow
 
@@ -297,16 +314,26 @@ axis-human-ai-toolbox/
 │   ├── agent-network.workflow.json      # Source of the network diagram
 │   ├── agent-network.png                # Rendered diagram, embedded in this README
 │   └── agent-network.html               # Same diagram, explorable
+├── workflows/
+│   ├── quick-task.js                    # plan → test → implement → review → PR
+│   ├── implement.js                     # test → implement → review → PR
+│   ├── refactor.js                      # plan → implement → review → PR
+│   └── bug-fix.js                       # reproduce → fix → review → PR
 ├── agents/
-│   ├── orchestrator-agent.md            # Default entry point — routes all intents
 │   ├── planning-features-agent.md       # Sub-agent: requirement discovery interviews
 │   ├── plan-expert-agent.md             # Sub-agent: technical decomposition
+│   ├── quality-assurance.md             # Sub-agent: TDD red phase tests
 │   ├── implement-task-agent.md          # Sub-agent: code + PR delivery
+│   ├── reviewer-agent.md               # Sub-agent: independent review gate
+│   ├── bugfixer-agent.md               # Sub-agent: reproduce + minimal patch
 │   ├── design-system-setup-agent.md     # Sub-agent: design system pipeline
+│   ├── wiki-agent.md                    # Sub-agent: project wiki management
 │   ├── playwright-test-planner.md       # Standalone: explore app → test plan
 │   ├── playwright-test-generator.md     # Standalone: test plan → .spec.ts files
-│   ├── playwright-test-healer.md        # Standalone: run + fix failing tests
+│   └── playwright-test-healer.md        # Standalone: run + fix failing tests
 ├── skills/
+│   ├── orchestrate/
+│   │   └── SKILL.md                     # Central router — classifies and dispatches
 │   ├── a11y-auditor/
 │   │   └── SKILL.md
 │   ├── code-review/
@@ -327,8 +354,8 @@ axis-human-ai-toolbox/
 │       └── SKILL.md
 ├── hooks/
 │   ├── hooks.json                       # Which hook runs on which event
-│   ├── orchestrator-router.js           # UserPromptSubmit: delegate only real work
-│   ├── orchestrator-guard.js            # PreToolUse: keep the orchestrator from writing
+│   ├── orchestrator-router.js           # UserPromptSubmit: classify and suggest workflow
+│   ├── orchestrator-guard.js            # PreToolUse: defense-in-depth write guard
 │   └── telemetry.js                     # Turn/agent/session usage → dashboard
 └── README.md
 ```
@@ -394,8 +421,9 @@ axis-human-ai-toolbox/
    Agent orchestration instructions...
    ```
 
-   **Important:** All agents in this plugin are sub-agents. Only `orchestrator-agent` is
-   auto-selected by Claude Code. New agents must be registered in the orchestrator's Routing Table.
+   **Important:** All agents in this plugin are sub-agents invoked by workflows or the
+   `orchestrate` skill. New agents must be registered in the skill's routing table
+   (`skills/orchestrate/SKILL.md`) and in any workflow script that should use them.
 
 3. Use the `skills` frontmatter field to preload skills. This ensures skills execute inline in the agent's context rather than being delegated to a subagent.
 
