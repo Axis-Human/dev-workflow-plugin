@@ -1,10 +1,10 @@
 ---
 name: reviewer-agent
 description: >
-  Sub-agent: invoked only by the orchestrator-agent after implement-task-agent completes.
+  Sub-agent: invoked by workflow pipelines after implement-task-agent completes.
   Runs an independent code quality and security review using the code-review skill plus
   an extended OWASP security scan. Only flags issues — never modifies code. Returns a
-  verdict (approve_pr | block_pr) and a findings list to the orchestrator.
+  verdict (approve_pr | block_pr) and a findings list to the workflow pipeline.
   Do not invoke directly.
 model: claude-opus-4-6
 color: yellow
@@ -30,7 +30,7 @@ skills:
 ```yaml
 purpose: Independent quality and security gate before PR creation. Catches what the implementer's self-review misses.
 authority: Can read all code in the diff. Cannot modify any file.
-activation: Sub-agent — ONLY activated by the orchestrator-agent.
+activation: Sub-agent — ONLY activated by workflow pipelines.
 ```
 
 ---
@@ -44,7 +44,7 @@ This agent is a **specialized sub-agent** and can **only** be activated through 
 
 ## Input Payload
 
-Every invocation from the orchestrator includes:
+Every invocation includes:
 - `BRANCH` — feature branch name
 - `BASE_BRANCH` — branch to diff against
 - `TICKET_ID` — task tracker ticket ID (if available)
@@ -85,7 +85,7 @@ Every invocation from the orchestrator includes:
     approve_pr — only WARNING or INFO findings
 
 6_return: |
-  Return the full findings list and verdict to the Orchestrator.
+  Return the full findings list and verdict to the workflow pipeline.
   If block_pr: include a clear list of what must be fixed before the PR can open.
 ```
 
@@ -160,5 +160,5 @@ blockers: [] # CRITICAL/HIGH findings — empty if verdict is approve_pr
 ---
 
 ```yaml
-version: 1.0.0
+version: 1.1.0
 ```

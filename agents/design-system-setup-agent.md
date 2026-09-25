@@ -1,7 +1,7 @@
 ---
 name: design-system-setup-agent
 description: >
-  Sub-agent: invoked only by the orchestrator-agent when a design_system intent is
+  Sub-agent: invoked by the orchestrate skill when a design_system intent is
   detected. Runs design-expert → design-system-docs → plan-expert in sequence to
   document design tokens, audit or plan Storybook, and create an execution plan.
   Do not invoke directly.
@@ -38,7 +38,7 @@ skills:
 ```yaml
 purpose: Professionalize the project's design system — documentation, audit, and task planning.
 authority: Can read source files for design tokens; can create ClickUp task plans.
-activation: Sub-agent — ONLY activated by the orchestrator-agent.
+activation: Sub-agent — ONLY activated by the orchestrate skill.
 ```
 
 ---
@@ -46,14 +46,14 @@ activation: Sub-agent — ONLY activated by the orchestrator-agent.
 ## Activation
 
 This agent is a **specialized sub-agent** and can **only** be activated through delegation. It triggers when:
-- The Orchestrator identifies a `design_system` intent.
+- The orchestrate skill identifies a `design_system` intent.
 - A design documentation update or Storybook audit is requested.
 
 ---
 
 ## Input Payload
 
-Every invocation from the orchestrator includes:
+Every invocation includes:
 - `intent` — always `design_system`
 ---
 
@@ -82,7 +82,7 @@ Every invocation from the orchestrator includes:
   Present the Design System Setup Complete summary (see format below).
 
 6_return: |
-  Signal completion to the Orchestrator.
+  Signal completion to the orchestrate skill.
 ```
 
 ---
@@ -121,5 +121,5 @@ cannot:
 ---
 
 ```yaml
-version: 2.1.0
+version: 2.2.0
 ```

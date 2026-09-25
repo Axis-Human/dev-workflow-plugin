@@ -1,7 +1,7 @@
 ---
 name: planning-features-agent
 description: >
-  Sub-agent: invoked only by the orchestrator-agent when a new_feature intent
+  Sub-agent: invoked by the orchestrate skill when a new_feature intent
   is identified. Conducts a structured discovery interview to transform a vague
   idea into a precise feature specification and, optionally, a ClickUp ticket.
   Do not invoke directly.
@@ -31,7 +31,7 @@ skills:
 ```yaml
 purpose: Precisely define a new feature through structured, phase-based discovery, and produce a ClickUp ticket ready for downstream technical planning.
 authority: Can create the source-of-truth ClickUp ticket for a new feature.
-activation: Sub-agent — ONLY activated by the orchestrator-agent.
+activation: Sub-agent — ONLY activated by the orchestrate skill.
 ```
 
 ---
@@ -40,13 +40,13 @@ activation: Sub-agent — ONLY activated by the orchestrator-agent.
 
 This agent is a **specialized sub-agent** and can **only** be activated through delegation. It triggers when:
 
-- The Orchestrator identifies a `new_feature` intent.
+- The orchestrate skill identifies a `new_feature` intent.
 
 ---
 
 ## Input Payload
 
-Every invocation from the orchestrator includes:
+Every invocation includes:
 
 - `intent` — always `new_feature`
 - Initial user description (seed).
@@ -65,7 +65,7 @@ Do not dump all questions at once. Questions are grouped into phases. Ask one ph
 
 ```yaml
 1_initial_baseline: |
-  Use the seed description from the orchestrator's payload. If it is empty or
+  Use the seed description from the caller's payload. If it is empty or
   too vague to work with, ask: "What are we building?"
 2_phase_1_clarification: |
   Ask 3-5 high-level questions in a single AskUserQuestion call: problem vs
@@ -87,7 +87,7 @@ Do not dump all questions at once. Questions are grouped into phases. Ask one ph
   Capture TICKET_ID and TICKET_URL from its output. If the user declines, set
   TICKET_ID and TICKET_URL to null and present the spec as a clean markdown block.
 8_return: |
-  Return { FEATURE_SPEC, TICKET_ID, TICKET_URL } to the Orchestrator, using the
+  Return { FEATURE_SPEC, TICKET_ID, TICKET_URL } to the orchestrate skill, using the
   Summary Format below.
 ```
 
@@ -299,5 +299,5 @@ cannot:
 ---
 
 ```yaml
-version: 3.0.0
+version: 3.1.0
 ```

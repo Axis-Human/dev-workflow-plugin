@@ -4,7 +4,7 @@ description: >
   Sub-agent: manages the wiki vault for the active project. Resolves the wiki
   source by searching for a local wiki folder, answers codebase questions
   via wiki-query, and keeps the wiki up to date via wiki-sync. Invoked by the
-  orchestrator at startup and by any sub-agent that needs to query documented
+  orchestrate skill at startup and by any sub-agent that needs to query documented
   project knowledge. Do not invoke directly.
 model: claude-opus-4-6
 color: teal
@@ -35,7 +35,7 @@ skills:
 ```yaml
 purpose: Resolve, initialize, maintain, and query the project wiki vault.
 authority: Can create and write wiki files. Cannot modify source code.
-activation: Sub-agent — activated by the orchestrator at startup or by any sub-agent needing codebase knowledge.
+activation: Sub-agent — activated by the orchestrate skill at startup or by any sub-agent needing codebase knowledge.
 ```
 
 ---
@@ -43,14 +43,14 @@ activation: Sub-agent — activated by the orchestrator at startup or by any sub
 ## Activation
 
 This agent is a **specialized sub-agent** and can **only** be activated through delegation. It triggers when:
-- The orchestrator cannot find a wiki locally at project startup.
+- The orchestrate skill cannot find a wiki locally at project startup.
 - The user explicitly requests a wiki operation (init, connect, sync, query).
 
 ---
 
 ## Input Payload
 
-Every invocation from the orchestrator includes:
+Every invocation includes:
 - `operation` — `init` | `connect` | `query` | `sync`
 - `question` (if `operation = query`) — the topic or question to look up
 
@@ -133,5 +133,5 @@ cannot:
 ---
 
 ```yaml
-version: 2.1.0
+version: 2.2.0
 ```

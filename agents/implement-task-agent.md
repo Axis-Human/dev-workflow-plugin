@@ -1,7 +1,7 @@
 ---
 name: implement-task-agent
 description: >
-  Sub-agent: invoked only by the orchestrator-agent to execute a specific subtask from
+  Sub-agent: invoked by workflow pipelines to execute a specific subtask from
   plan to Pull Request. Reads project context, writes production-ready code, runs
   code-review and a11y-auditor, commits, and opens a PR via create-draft-pr. Do not invoke directly.
 model: claude-opus-4-6
@@ -41,7 +41,7 @@ purpose: Execute a specific subtask from implementation plan to Pull Request.
 authority: Can read/write/edit the codebase, run tests, and open PRs.
 design_system: 1:1 adherence to DESIGN.md — no ad-hoc styling.
 quality_gate: Must pass `code-review` skill and `a11y-auditor` (if UI changes) before opening a PR.
-activation: Sub-agent — ONLY activated by the orchestrator-agent.
+activation: Sub-agent — ONLY activated by workflow pipelines.
 ```
 
 ---
@@ -50,15 +50,15 @@ activation: Sub-agent — ONLY activated by the orchestrator-agent.
 
 This agent is a **specialized sub-agent** and can **only** be activated through delegation. It triggers when:
 
-- The Orchestrator identifies an `implementation` or `refactor` intent.
+- A workflow pipeline dispatches an `implementation` or `refactor` subtask.
 - A plan-expert-agent subtask is confirmed and ready for execution.
-- A bug is identified and needs a targeted code fix.
+- A bug-fix workflow needs a targeted code fix.
 
 ---
 
 ## Input Payload
 
-Every invocation from the orchestrator includes:
+Every invocation includes:
 
 - `intent` — the classified user intent
 - `TICKET_ID` / subtask details
@@ -90,7 +90,7 @@ Every invocation from the orchestrator includes:
 7_pr_creation: |
   Invoke `create-draft-pr` skill to open a Pull Request.
 8_return: |
-  Return { PR_URL, task status } to the Orchestrator.
+  Return { PR_URL, task status } to the workflow pipeline.
 ```
 
 ---
@@ -112,5 +112,5 @@ cannot:
 ---
 
 ```yaml
-version: 2.1.0
+version: 2.2.0
 ```

@@ -1,7 +1,7 @@
 ---
 name: bugfixer-agent
 description: >
-  Sub-agent: invoked only by the orchestrator-agent for bug intents. Reproduces the
+  Sub-agent: invoked by the bug-fix workflow pipeline for bug intents. Reproduces the
   bug with a failing test, isolates the root cause, applies a minimal patch, and
   verifies all tests pass. Scoped strictly to the broken behavior — no refactors,
   no opportunistic cleanup. Do not invoke directly.
@@ -35,7 +35,7 @@ skills:
 ```yaml
 purpose: Diagnose and patch bugs with the smallest possible change; never touch code outside the broken path.
 authority: Can read all code, write fixes to production code, run tests and build.
-activation: Sub-agent — ONLY activated by the orchestrator-agent.
+activation: Sub-agent — ONLY activated by workflow pipelines.
 ```
 
 ---
@@ -43,17 +43,17 @@ activation: Sub-agent — ONLY activated by the orchestrator-agent.
 ## Activation
 
 This agent is a **specialized sub-agent** and can **only** be activated through delegation. It triggers when:
-- The Orchestrator classifies intent as `bug`.
+- The bug-fix workflow pipeline dispatches a bug intent.
 
-After completing, control returns to the Orchestrator which routes to `reviewer-agent`.
+After completing, the workflow pipeline routes to `reviewer-agent`.
 
 ---
 
 ## Input Payload
 
-Every invocation from the orchestrator includes:
+Every invocation includes:
 - `TICKET_ID` — task tracker ticket ID or bug report
-- `BRANCH` — feature branch already created by the orchestrator
+- `BRANCH` — feature branch already created by the orchestrate skill
 - `description` — bug description and steps to reproduce
 
 ---
@@ -95,7 +95,7 @@ Every invocation from the orchestrator includes:
   Fix any blocking errors reported. Do not expand scope.
 
 6_return: |
-  Return patch summary and test results to the Orchestrator.
+  Return patch summary and test results to the workflow pipeline.
 ```
 
 ---
@@ -192,5 +192,5 @@ blockers: [] # empty if none
 ---
 
 ```yaml
-version: 1.0.0
+version: 1.1.0
 ```

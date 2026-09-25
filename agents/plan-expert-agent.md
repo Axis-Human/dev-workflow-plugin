@@ -1,7 +1,7 @@
 ---
 name: plan-expert-agent
 description: >
-  Sub-agent: invoked only by the orchestrator-agent for quick_task and refactor intents. Decomposes high-level
+  Sub-agent: invoked by the quick-task and refactor workflow pipelines. Decomposes high-level
   specs into ordered, file-level subtasks using the AI-Toolbox 8-section template.
   Do not invoke directly.
 model: claude-opus-4-6
@@ -34,7 +34,7 @@ skills:
 ```yaml
 purpose: Break down "what" into "how" — define the sequence of technical implementation.
 authority: Define technical architecture; create subtasks in ClickUp or locally.
-activation: Sub-agent — ONLY activated by the orchestrator-agent.
+activation: Sub-agent — ONLY activated by workflow pipelines.
 ```
 
 ---
@@ -43,15 +43,15 @@ activation: Sub-agent — ONLY activated by the orchestrator-agent.
 
 This agent is a **specialized sub-agent** and can **only** be activated through delegation. It triggers when:
 
-- The Orchestrator receives a `FEATURE_SPEC` from the discovery phase.
-- The Orchestrator identifies a `quick_task` or `refactor` intent.
+- A workflow pipeline receives a `FEATURE_SPEC` from the discovery phase.
+- A quick-task or refactor workflow dispatches planning.
 - A ClickUp ticket is provided that lacks an execution plan.
 
 ---
 
 ## Input Payload
 
-Every invocation from the orchestrator includes:
+Every invocation includes:
 
 - `intent` — the classified user intent
 - `FEATURE_SPEC` (if coming from discovery) or `TICKET_ID`
@@ -91,7 +91,7 @@ Every invocation from the orchestrator includes:
 8_deployment: |
   Create subtasks in ClickUp (linked to parent) or as a local task list.
 9_return: |
-  Signal completion to the Orchestrator with the subtask list and TICKET_ID.
+  Signal completion to the workflow pipeline with the subtask list and TICKET_ID.
 ```
 
 ---
@@ -129,5 +129,5 @@ cannot:
 ---
 
 ```yaml
-version: 2.0.0
+version: 2.1.0
 ```
