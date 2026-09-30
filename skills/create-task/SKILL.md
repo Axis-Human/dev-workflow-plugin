@@ -28,12 +28,14 @@ effort: medium
 ## Step 1 — Gather Input
 
 Parse `$ARGUMENTS` for:
+
 - `--input "<text>"` — the raw description to process
 - `--type <US|BUG|IMP|TASK|SPIKE>` — force a specific task type (skip classification)
 
 **If `--input` is provided:** acknowledge briefly and proceed to Step 2.
 
 **If no input is provided:** use `AskUserQuestion` with:
+
 - Header: "Create Task"
 - Question: "Describe the task, bug, or idea you want to capture. You can paste a client message, a rough note, or a voice transcription — I'll handle the formatting."
 
@@ -45,17 +47,18 @@ If `--type` was explicitly provided, use that type and skip classification.
 
 Otherwise, analyze the raw input and classify it into one of the 5 types using these rules:
 
-| Type | When to use |
-|---|---|
-| `[US]` | Describes a new feature or capability from a user's perspective. Focus is on what the user wants to achieve. |
-| `[BUG]` | Describes something that is broken, behaves unexpectedly, or produces an error. |
-| `[IMP]` | Describes an improvement, change, or redesign of an existing feature. Not a new feature and not a bug. |
-| `[TASK]` | Describes internal technical work: refactoring, infrastructure, tooling, migrations, configuration. No user-facing story. |
+| Type      | When to use                                                                                                               |
+| --------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `[US]`    | Describes a new feature or capability from a user's perspective. Focus is on what the user wants to achieve.              |
+| `[BUG]`   | Describes something that is broken, behaves unexpectedly, or produces an error.                                           |
+| `[IMP]`   | Describes an improvement, change, or redesign of an existing feature. Not a new feature and not a bug.                    |
+| `[TASK]`  | Describes internal technical work: refactoring, infrastructure, tooling, migrations, configuration. No user-facing story. |
 | `[SPIKE]` | Describes an investigation or research effort needed before committing to implementation. Centers on a specific question. |
 
 If the input clearly maps to one type, proceed silently.
 
 If the input is ambiguous between two types (e.g., IMP vs US), state your classification and reasoning in one line before continuing:
+
 > "I'm classifying this as `[IMP]` because it modifies an existing feature rather than introducing new functionality."
 
 ---
@@ -68,16 +71,14 @@ the first one that exists:
 
 1. `templates/clickup/<type>_task_template.md` in the project being worked on —
    a repo that ships its own template wins.
-2. `<skill dir>/../../templates/clickup/<type>_task_template.md`, the agency
-   default that ships with the plugin. `<skill dir>` is this skill's own
-   directory, announced when it loaded; it is not the working directory.
+2. `https://raw.githubusercontent.com/Axis-Human/dev-workflow-plugin/main/templates/clickup/<type>_task_template.md`, the agency default that ships with the plugin.
 
-| Type | Template file |
-|---|---|
-| `[US]` | `us_task_template.md` |
-| `[BUG]` | `bug_task_template.md` |
-| `[IMP]` | `imp_task_template.md` |
-| `[TASK]` | `task_task_template.md` |
+| Type      | Template file            |
+| --------- | ------------------------ |
+| `[US]`    | `us_task_template.md`    |
+| `[BUG]`   | `bug_task_template.md`   |
+| `[IMP]`   | `imp_task_template.md`   |
+| `[TASK]`  | `task_task_template.md`  |
 | `[SPIKE]` | `spike_task_template.md` |
 
 **If neither can be read, stop and say so.** Do not reconstruct the template
