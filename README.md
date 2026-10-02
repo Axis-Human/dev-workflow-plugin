@@ -73,6 +73,7 @@ Skills are reusable workflows invoked with a `/` command directly in Claude Code
 | **design-system-setup** | `/design-system-setup` | End-to-end design system setup. Runs `design-expert` → `design-system-docs` → `plan-expert` in sequence to document the design system, audit or plan Storybook, and create all execution tasks in ClickUp or locally.                                                                      |
 | **create-draft-pr**     | `/create-draft-pr`     | Creates a GitHub PR with a fully auto-populated standardized template. Infers base branch, derives description from the diff, detects shared code impact, tags stakeholders from CODEOWNERS, and builds a concrete test plan. Designed to run without human input when called by an agent. |
 | **implement-task**      | `/implement-task`      | Implements a task end-to-end. Given a ClickUp ticket ID or description, reads project context, plans at the file level, writes the code, runs automated checks + `code-review`, applies fixes, commits, and opens a PR via `create-draft-pr`.                                              |
+| **backlog-proposal**    | `/backlog-proposal`    | Turns a rough idea into a full backlog proposal — problem, evidence, affected users, solution, value, scope, technical analysis, estimate, risks, open questions. Reads the project's roles and modules from its ClickUp space first, then publishes the proposal back as a doc page. Runs *before* a feature becomes a ticket. |
 
 ### Agents (sub-agents invoked by workflows)
 
@@ -240,6 +241,12 @@ All skills accept optional arguments. Run without arguments and the skill will a
 
 # Implement a task from a description (runs plan-expert first, then implements)
 /implement-task --description "Add email validation to the signup form"
+
+# Analyse an idea before it enters the backlog (asks which ClickUp project it's for)
+/backlog-proposal --input "Applicants abandon the form at the attachments step"
+
+# Skip the project question and publish straight into that project's doc
+/backlog-proposal --project "Gilly" --doc-id y5416-17034 --output clickup
 ```
 
 ### Workflow pipelines
@@ -335,6 +342,8 @@ axis-human-ai-toolbox/
 │   ├── orchestrate/
 │   │   └── SKILL.md                     # Central router — classifies and dispatches
 │   ├── a11y-auditor/
+│   │   └── SKILL.md
+│   ├── backlog-proposal/
 │   │   └── SKILL.md
 │   ├── code-review/
 │   │   └── SKILL.md
