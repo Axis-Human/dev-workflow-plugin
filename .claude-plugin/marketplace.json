@@ -2,7 +2,7 @@
 	"name": "axis-human-ai-toolbox",
 	"owner": {
 		"name": "Axis Human",
-		"email": "[EMAIL_ADDRESS]"
+		"email": "info@axishuman.ai"
 	},
 	"metadata": {
 		"description": "Skills, agents and workflow pipelines for software teams. Covers accessibility auditing, code review, project initialization, deterministic multi-agent workflows (plan → test → implement → review → PR), and feature planning backed by ClickUp.",
