@@ -26,7 +26,7 @@ There is no orchestrator agent. The `orchestrate` skill runs in the main session
 
 All other agents remain as sub-agent definitions. Workflows reference them via `agentType: 'axis-human-ai-toolbox:<agent-name>'`. When you add or rename an agent, update the `AGENTS` constant in any workflow that references it.
 
-Skills and agents often *pair up*: many skills (e.g. `implement-task`, `plan-expert`, `feature-discovery`) have a same-named agent that preloads them via the `skills:` frontmatter field. The skill is for direct `/command` invocation; the agent is for workflow routing. Keep their bodies in sync when editing one.
+Skills and agents often _pair up_: many skills (e.g. `implement-task`, `plan-expert`, `feature-discovery`) have a same-named agent that preloads them via the `skills:` frontmatter field. The skill is for direct `/command` invocation; the agent is for workflow routing. Keep their bodies in sync when editing one.
 
 ## Manifest files
 
@@ -52,12 +52,14 @@ Skills and agents reference MCP tools by name in their `tools:` / `allowed-tools
 - `mcp__clickup__*` — ticket reads, task and subtask creation.
 - `mcp__github__*` — PR creation, repo operations.
 
-These MCP servers are configured on the *user's* Claude Code installation, not this repo. When editing a skill or agent that uses an MCP tool, verify the tool name matches what the MCP server actually exposes — a typo here fails silently at runtime in the user's session.
+These MCP servers are configured on the _user's_ Claude Code installation, not this repo. When editing a skill or agent that uses an MCP tool, verify the tool name matches what the MCP server actually exposes — a typo here fails silently at runtime in the user's session.
 
 ## Conventions
 
 - Agents must be **stack-agnostic**: no hardcoded framework names, file paths, package managers, or project-specific tooling in agent files. They run in arbitrary downstream codebases and must discover the stack at runtime (typically via the `init-project` skill or by reading `AGENTS.md` / `WIKI.md`).
 - Frontmatter `effort:` is one of `low | medium | high` and signals expected token cost to Claude Code.
+- Developer-only skills (e.g. `vertical-slice`) set `disable-model-invocation: true`, so only a typed `/command` runs them. They get no paired agent, no `orchestrate` route and no workflow step any of those would let non-developer flows reach them.
+- A skill that needs deterministic logic (statistics, structure checks) may ship helper scripts in `skills/<name>/scripts/`. They use only Node built-in modules Node is already required by the hooks and SKILL.md calls them through `${CLAUDE_PLUGIN_ROOT}`.
 - Agent files end with a `version:` field inside a trailing YAML block — bump it when changing routing or workflow semantics.
 
 ## Templates
