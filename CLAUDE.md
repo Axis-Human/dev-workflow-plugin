@@ -58,8 +58,8 @@ These MCP servers are configured on the _user's_ Claude Code installation, not t
 
 - Agents must be **stack-agnostic**: no hardcoded framework names, file paths, package managers, or project-specific tooling in agent files. They run in arbitrary downstream codebases and must discover the stack at runtime (typically via the `init-project` skill or by reading `AGENTS.md` / `WIKI.md`).
 - Frontmatter `effort:` is one of `low | medium | high` and signals expected token cost to Claude Code.
-- Developer-only skills (e.g. `vertical-slice`) set `disable-model-invocation: true`, so only a typed `/command` runs them. They get no paired agent, no `orchestrate` route and no workflow step any of those would let non-developer flows reach them.
-- A skill that needs deterministic logic (statistics, structure checks) may ship helper scripts in `skills/<name>/scripts/`. They use only Node built-in modules Node is already required by the hooks and SKILL.md calls them through `${CLAUDE_PLUGIN_ROOT}`.
+- Developer-only skills (e.g. `vertical-slice`) set `disable-model-invocation: true`, so only a typed `/command` runs them. They get no paired agent, no `orchestrate` route and no workflow step, because any of those would let non-developer flows reach them.
+- A skill that needs deterministic logic (statistics, structure checks) may ship helper scripts in `skills/<name>/scripts/`. They use only Node built-in modules (Node is already required by the hooks), and SKILL.md calls them through `${CLAUDE_PLUGIN_ROOT}`.
 - Agent files end with a `version:` field inside a trailing YAML block — bump it when changing routing or workflow semantics.
 
 ## Templates

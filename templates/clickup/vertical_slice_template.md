@@ -21,7 +21,7 @@
 ## Definition of Ready
 - [ ] GWT defined
 - [ ] ≤ 2 working days (active)
-- [ ] ≤ 24 files (est.)
+- [ ] ≤ 24 files changed (est.), or up to 45 if most of them are small edits such as renames or moved files
 - [ ] Testable
 - [ ] Dependencies resolved
 

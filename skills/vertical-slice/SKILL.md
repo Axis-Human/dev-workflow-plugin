@@ -96,7 +96,12 @@ When the developer continues, add this as the first acceptance-criteria line of 
 list it in the report:
 `- **Given** this slice was cut from an incomplete story (<gaps>) **When** it is refined **Then** its criteria are re-checked before work starts`
 
-**1c. Already sliced?** If any subtask's name starts with `[SLICE`, stop and show the existing slices. Re-slicing needs those subtasks closed or removed first.
+**1c. Existing slices.** Collect the story's subtasks whose name starts with `[SLICE`. For each,
+fetch it with `clickup_get_task` (include `description`) and note its number, its `Scope` and its
+`Counterpart`. With none, continue. Otherwise decide once this run's scope is known (Step 2):
+
+- This run is single-sided and every existing slice is single-sided on the **other** side → continue. The existing slices are counterpart candidates (Step 7), and the new slices are numbered after them (Step 8).
+- Anything else (an existing full-stack slice, an existing slice on the same side, or a full-stack run) → stop and show the existing slices. Re-slicing that work needs those subtasks closed or removed first.
 
 **1d. Readiness signal** (never blocks):
 
@@ -122,6 +127,8 @@ defaults suggested from the code (Step 3 can run first to inform the defaults):
    - If the developer picks one side but this repository clearly contains both, ask once more with a one-line note. Don't block.
 
 Every slice inherits these answers. The developer can change any single slice in the preview (Step 9).
+
+If Step 1c found existing slices, apply its rule now that the scope is known.
 
 **The other side's code is never guessed.** Whenever a slice needs code that is not in the
 current working directory (the backend for a frontend slice, the frontend for a backend slice,
@@ -176,14 +183,20 @@ If the ClickApp is off or fewer than 5 tasks come back, skip 4a and say so in on
 as returned, and add `--repo-dir` once per repository involved:
 
 ```bash
+STATUS_MAP=$(cat <<'MAP'
+<confirmed mapping as JSON, e.g. {"to do's": "Backlog", "in progress": "Active"}>
+MAP
+)
 node "${CLAUDE_PLUGIN_ROOT}/skills/vertical-slice/scripts/slice-baseline.mjs" \
   --window-days <n> --repo-dir "<repo path>" \
-  --status-map '<confirmed mapping as JSON>' --time-in-status - <<'JSON'
+  --status-map "$STATUS_MAP" --time-in-status - <<'JSON'
 <bulk time-in-status response>
 JSON
 ```
 
-Without time-in-status data, leave out `--status-map` and `--time-in-status`. If `node` is not
+Always pass the mapping through the `MAP` heredoc as shown: status names can contain quotes or
+apostrophes (`to do's`), which break an inline quoted argument. Without time-in-status data, leave
+out `STATUS_MAP`, `--status-map` and `--time-in-status`. If `node` is not
 available, say so in one line and use the default limits.
 
 **Reading the output:**
@@ -257,8 +270,9 @@ desktop vs mobile is a platform cut; data variants are data-variation cuts.
 
 **Counterparts** (single-sided slices only). Read the story's subtasks from Step 1:
 
-- Subtasks made by this skill start with `[SLICE` and carry a `Scope` field — match them exactly.
-- Hand-made subtasks are matched by title and description; confirm each match with the developer.
+- Existing slices from Step 1c start with `[SLICE` and carry a `Scope` field — pair each new slice with the other-side slice(s) covering the same behaviour.
+- Hand-made subtasks are matched by title and description.
+- Confirm every pairing with the developer before using it.
 
 Set the slice's `Counterpart` to exactly one of:
 
@@ -268,6 +282,18 @@ Set the slice's `Counterpart` to exactly one of:
 | `⚠ none found`                                                     | half of full-stack work; the other half doesn't exist yet | `only when counterpart still to be created is complete` |
 | `Not needed: no backend change` / `Not needed: no frontend change` | genuinely one-sided work                                  | `this slice alone`                                      |
 | `N/A: full-stack`                                                  | both sides are in this slice                              | `this slice alone`                                      |
+
+**Earlier slices that go out of date.** Creating new slices changes existing slices from Step 1c in
+two ways. Prepare the exact line changes now, show them in Step 9 and apply them in Step 10:
+
+- **Every existing slice:** the total `N` grows, so its title `[SLICE n/N]`, its `Slice:` line and its technical prompt's first line get the new total.
+- **An existing slice paired with a new one whose `Counterpart` is `⚠ none found`:**
+  - `Counterpart:` → `<new slice ID> — <new slice title>`
+  - `QA-ready:` → `only when counterpart <new slice ID> is complete`
+  - each `Confirms: … (⚠ none found)` under Unconfirmed contract points → `Confirms: … (<new slice ID>)`
+
+An existing slice that says `Not needed: no … change` but now has a counterpart contradicts the new
+run: ask the developer which is right before changing anything.
 
 **A single-sided slice describes only its own side.** Read the other side's code (Step 2) to work
 out what this slice needs — field names, payload shapes, validation, existing screens — but put
@@ -297,6 +323,7 @@ How the loop runs after creation (explained to the team in the skill's README):
 For each slice, fill the template top to bottom:
 
 - **Title:** `# [SLICE <n>/<N>] <imperative title naming the user-facing flow>`. In ClickUp the task name is this line without the leading `# `.
+- **Numbering with existing slices:** with E existing slices (Step 1c) and K new ones, the new slices are numbered E+1 … E+K, and N is E+K.
 - Keep every heading, label and fixed line exactly as in the template, in the same order.
 - Replace each `{…}` placeholder with one of its listed options, or with content where it describes content. Never leave a placeholder.
 - A field that doesn't apply gets its `N/A` / `None` option. Never drop a field.
@@ -329,6 +356,7 @@ Show, in order:
 2. The Requirement Inventory with every row covered.
 3. The Slice Ledger.
 4. Every rendered slice in full.
+5. The line changes for every earlier slice (Step 7), slice by slice. New slice IDs appear as `<ID of SLICE n>` until they exist.
 
 Then ask with `AskUserQuestion`:
 
@@ -336,8 +364,11 @@ Then ask with `AskUserQuestion`:
 - "Change a slice first" — apply the change, re-render, re-check, preview again
 - "Keep them local" — create local tasks with `TaskCreate` instead, one per slice, in order
 
-**`--dry-run`:** stop after the preview. Also print, for each slice, the exact `clickup_create_task`
-and `clickup_add_task_link` calls that would be sent. Nothing is written — not to ClickUp, not to
+When there are earlier slices to change, also ask: "Update the earlier slices as shown
+(Recommended)" or "Leave them — list the edits for me to make by hand".
+
+**`--dry-run`:** stop after the preview. Also print, for each slice, the exact `clickup_create_task`,
+`clickup_add_task_link` and `clickup_update_task` calls that would be sent. Nothing is written — not to ClickUp, not to
 local tasks.
 
 ---
@@ -361,9 +392,23 @@ After creating each one:
    ```
    mcp__clickup__clickup_add_task_link { task_id: "<new slice id>", links_to: "<counterpart id>" }
    ```
-2. Read the task back with `clickup_get_task`. Its plain-text content must not contain literal `**`, lines starting with `#`, or lines that are only `---`. If it does, report that the slice's formatting did not render and stop creating further slices.
+2. Read the task back with `clickup_get_task`. Its plain-text content must not contain the literal text `## Definition of Done` or `**Scope:**`. Both come only from the template, never from code blocks, so finding either means the markdown was not rendered. If it does, report that the slice's formatting did not render and stop creating further slices.
 
-Never create a slice the developer has not confirmed in Step 9.
+**Then update the earlier slices**, only if the developer chose to in Step 9. For each one:
+
+1. Fetch it again with `clickup_get_task` (include `description`), so edits people made since Step 1 are kept.
+2. Change only the confirmed lines, filling in the new slice IDs.
+3. Put `# <new task name>` on top and run `check-slice.mjs` on the result with its `--n` and the new `--total`. On `FAIL`, don't write it: list its edits in the report instead.
+4. Write it back:
+   ```
+   mcp__clickup__clickup_update_task {
+     task_id: "<earlier slice id>",
+     name: "[SLICE <n>/<new N>] <title>",
+     markdown_description: "<updated description, from '## Slice' to the end>"
+   }
+   ```
+
+Never create or change a slice the developer has not confirmed in Step 9.
 
 ---
 
@@ -377,6 +422,8 @@ Never create a slice the developer has not confirmed in Step 9.
 
 Baseline: <source and sample, or defaults>
 Missing counterparts: <slice → the side still to be created, or "none">
+Earlier slices updated: <IDs, or "none">
+Edits still to make by hand: <slice → exact line changes, or "none">
 Contract points awaiting confirmation: <slice: A1, A2 → confirmer, or "none">
 QA rule: a slice that is half of full-stack work goes to QA only when its counterpart is complete.
 
@@ -412,6 +459,7 @@ End with the final Slice Ledger.
 - The slice order leaves a developer with more than 3 open slices.
 - A single-sided slice that mentions stubs, mocks or the other side's implementation.
 - A missing counterpart that is not in the report.
+- An earlier slice still saying `⚠ none found` after its counterpart was created, with no update and no manual edit in the report.
 - Contract point IDs that don't match between the two contract sections.
 - A design state from the story that no slice covers.
 - The Ledger or Inventory is missing or stale after a detour.

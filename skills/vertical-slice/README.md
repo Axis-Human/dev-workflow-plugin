@@ -1,6 +1,6 @@
 # vertical-slice
 
-> Token cost: ~8300 tokens
+> Estimated token cost: ~8300 tokens
 
 Splits one complete ClickUp user story into thin vertical slices, numbered in the order they
 should be built, and creates each slice as a subtask on the story.
@@ -50,20 +50,20 @@ change anything in ClickUp.
 
 ## How it works
 
-| Step                     | What happens                                                                                                                                                                                                                                                                                                            |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0. Role gate             | Asks your role and stops for anyone who isn't an engineering role.                                                                                                                                                                                                                                                      |
-| 1. Story check           | Fetches the ticket. It must be a `[US]` (or "User Story" type) and complete against [`us_task_template.md`](../../templates/clickup/us_task_template.md). Anything else gets a proposal to reject it, with a redirect. An incomplete story can be sliced only if you choose to, and every slice then carries a warning. |
-| 2. Questions             | Asks once per story, only when the story doesn't say: is the work behind a feature flag, and is it full-stack, frontend only or backend only? If the other side's code isn't in your working directory, it asks for the full absolute path.                                                                             |
-| 3. Discovery             | Reads `AGENTS.md`, `WIKI.md`, `DESIGN.md` and the code: the flag mechanism, existing contracts, design states and your validation commands.                                                                                                                                                                             |
-| 4. Baseline              | Measures your team's real delivery history and ClickUp flow (below).                                                                                                                                                                                                                                                    |
-| 5. Requirement Inventory | Turns every acceptance criterion, copy string, rule and design state into a row that some slice must cover.                                                                                                                                                                                                             |
-| 6. Slicing               | Deployability test, Given–When–Then boundaries, slicing strategies, the slice-count check, a merge pass and the 1 + 2 open-work rule.                                                                                                                                                                                   |
-| 7. Counterparts          | For single-sided slices, finds the other side's subtask (or reports it missing) and lists contract details that still need confirming.                                                                                                                                                                                  |
-| 8. Render and check      | Fills the template and runs a structure check. A slice that doesn't match the template exactly is regenerated.                                                                                                                                                                                                          |
-| 9. Preview               | Shows everything and waits for your confirmation. `--dry-run` stops here.                                                                                                                                                                                                                                               |
-| 10. Create               | Creates the subtasks in order 1 → N and links counterparts. It reads each one back to check ClickUp rendered the formatting.                                                                                                                                                                                            |
-| 11. Report               | Lists the created slices, missing counterparts, open contract points and next steps.                                                                                                                                                                                                                                    |
+| Step                     | What happens                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0. Role gate             | Asks your role and stops for anyone who isn't an engineering role.                                                                                                                                                                                                                                                                                                                                                                            |
+| 1. Story check           | Fetches the ticket. It must be a `[US]` (or "User Story" type) and complete against [`us_task_template.md`](../../templates/clickup/us_task_template.md). Anything else gets a proposal to reject it, with a redirect. An incomplete story can be sliced only if you choose to, and every slice then carries a warning. If the story already has slices, the run continues only when they're all on the other side from this run (see below). |
+| 2. Questions             | Asks once per story, only when the story doesn't say: is the work behind a feature flag, and is it full-stack, frontend only or backend only? If the other side's code isn't in your working directory, it asks for the full absolute path.                                                                                                                                                                                                   |
+| 3. Discovery             | Reads `AGENTS.md`, `WIKI.md`, `DESIGN.md` and the code: the flag mechanism, existing contracts, design states and your validation commands.                                                                                                                                                                                                                                                                                                   |
+| 4. Baseline              | Measures your team's real delivery history and ClickUp flow (below).                                                                                                                                                                                                                                                                                                                                                                          |
+| 5. Requirement Inventory | Turns every acceptance criterion, copy string, rule and design state into a row that some slice must cover.                                                                                                                                                                                                                                                                                                                                   |
+| 6. Slicing               | Deployability test, Given–When–Then boundaries, slicing strategies, the slice-count check, a merge pass and the 1 + 2 open-work rule.                                                                                                                                                                                                                                                                                                         |
+| 7. Counterparts          | For single-sided slices, finds the other side's subtask (or reports it missing) and lists contract details that still need confirming.                                                                                                                                                                                                                                                                                                        |
+| 8. Render and check      | Fills the template and runs a structure check. A slice that doesn't match the template exactly is regenerated.                                                                                                                                                                                                                                                                                                                                |
+| 9. Preview               | Shows everything and waits for your confirmation. `--dry-run` stops here.                                                                                                                                                                                                                                                                                                                                                                     |
+| 10. Create               | Creates the subtasks in order and links counterparts. It reads each one back to check ClickUp rendered the formatting. If you agreed in the preview, it then updates earlier slices that are now out of date.                                                                                                                                                                                                                                 |
+| 11. Report               | Lists the created slices, missing counterparts, open contract points and next steps.                                                                                                                                                                                                                                                                                                                                                          |
 
 ---
 
@@ -117,6 +117,17 @@ A slice is either the whole flow (**full-stack**) or one side of it (**frontend 
 frontend only or backend only. Counterparts are linked in ClickUp without a blocking dependency,
 so either side can ship first behind a flag. For example, the UI can be built first while the
 backend is still in progress.
+
+### Slicing the other side later
+
+Each side of a story can be sliced in its own run. Say the frontend was sliced first, and its
+slices say `Counterpart: ⚠ none found`. Later, a backend developer runs the skill on the same
+story with scope "backend only":
+
+- The run continues, because the existing slices are all on the other side. If an existing slice is full-stack or on the same side, the run stops instead.
+- New slices are numbered after the existing ones. With 2 existing and 2 new, the new ones are `[SLICE 3/4]` and `[SLICE 4/4]`.
+- Each new backend slice is paired with its frontend slice (you confirm the pairs) and linked to it.
+- The earlier slices are now out of date: their totals still say `/2`, and their `Counterpart`, `QA-ready` and `Confirms: … (⚠ none found)` lines still point at nothing. The preview shows the exact line changes. If you agree, the skill fetches each earlier slice fresh, so edits people made in the meantime are kept, changes only those lines, checks the result and writes it back. If you decline, the report lists the edits to make by hand.
 
 A single-sided slice only ever describes its own side. The skill reads the other side's code to
 get field names and payload shapes right. It never writes stubs, mocks or the other side's
@@ -228,16 +239,18 @@ variable instead, which needs Claude Code 2.1.280 or later:
 
 ### 3. Run the cases with `--dry-run`
 
-| Case                                               | Expected                                                                           |
-| -------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| A complete `[US]`                                  | Slices are previewed with their payloads, and nothing is written                   |
-| An incomplete `[US]`                               | The reject-or-continue choice appears. Continuing adds the warning to every slice. |
-| A `[BUG]` or `[TASK]` ticket                       | A proposal to reject it, with a redirect                                           |
-| No `--ticket-id`                                   | The skill stops and asks for one                                                   |
-| Role answered as product or project management     | The skill stops                                                                    |
-| A frontend-only slice whose backend subtask exists | `Counterpart: <ID> — <title>`, QA-ready only when that counterpart is complete     |
-| A frontend-only slice with no backend subtask      | `Counterpart: ⚠ none found`, listed in the report                                  |
-| "Slice this story" typed as plain text             | The skill does not start                                                           |
+| Case                                                   | Expected                                                                                                                               |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| A complete `[US]`                                      | Slices are previewed with their payloads, and nothing is written                                                                       |
+| An incomplete `[US]`                                   | The reject-or-continue choice appears. Continuing adds the warning to every slice.                                                     |
+| A `[BUG]` or `[TASK]` ticket                           | A proposal to reject it, with a redirect                                                                                               |
+| No `--ticket-id`                                       | The skill stops and asks for one                                                                                                       |
+| Role answered as product or project management         | The skill stops                                                                                                                        |
+| A frontend-only slice whose backend subtask exists     | `Counterpart: <ID> — <title>`, QA-ready only when that counterpart is complete                                                         |
+| A frontend-only slice with no backend subtask          | `Counterpart: ⚠ none found`, listed in the report                                                                                      |
+| Backend-only run on a story with frontend-only slices  | Continues; new slices numbered after the existing ones; preview shows the earlier slices' line changes and `clickup_update_task` calls |
+| Frontend-only run on a story with frontend-only slices | Stops and shows the existing slices                                                                                                    |
+| "Slice this story" typed as plain text                 | The skill does not start                                                                                                               |
 
 ### 4. One real write, in a sandbox
 

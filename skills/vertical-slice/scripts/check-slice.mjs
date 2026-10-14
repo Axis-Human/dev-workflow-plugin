@@ -112,6 +112,7 @@ export function expectedStructure(templateTokens, { scope, hasPoints }) {
   const fixedLines = new Set();
   const linePrefixes = [];
   const promptPrefixes = [];
+  const excludedPromptPrefixes = [];
   for (const t of templateTokens.filter(keep)) {
     if (t.kind === 'title' || t.kind === 'heading') structure.push(t.kind === 'title' ? 'title' : t.text);
     else if (t.kind === 'label') structure.push(`label:${t.text}`);
@@ -127,7 +128,10 @@ export function expectedStructure(templateTokens, { scope, hasPoints }) {
         ? PROMPT_FIRST_LINE
         : PROMPT_PREFIX.exec(t.text)?.[0].trim();
       if (prefix) {
-        if (PROMPT_BLOCK_FOR[prefix] === dropBlock) continue;
+        if (PROMPT_BLOCK_FOR[prefix] === dropBlock) {
+          excludedPromptPrefixes.push(prefix);
+          continue;
+        }
         structure.push(`prompt:${prefix}`);
         promptPrefixes.push(prefix);
       } else if (t.text.trim() && !t.text.includes('{') && !t.text.startsWith('-')) {
@@ -136,10 +140,10 @@ export function expectedStructure(templateTokens, { scope, hasPoints }) {
       }
     }
   }
-  return { structure, fixedLines, linePrefixes, promptPrefixes };
+  return { structure, fixedLines, linePrefixes, promptPrefixes, excludedPromptPrefixes };
 }
 
-function actualStructure(sliceTokens, { fixedLines, linePrefixes, promptPrefixes }) {
+function actualStructure(sliceTokens, { fixedLines, linePrefixes, promptPrefixes, excludedPromptPrefixes }) {
   const structure = [];
   for (const t of sliceTokens) {
     if (t.kind === 'title') structure.push('title');
@@ -149,7 +153,9 @@ function actualStructure(sliceTokens, { fixedLines, linePrefixes, promptPrefixes
     else if (t.kind === 'line' && linePrefixes.some((p) => t.text.startsWith(p)))
       structure.push(`line:${linePrefixes.find((p) => t.text.startsWith(p))}`);
     else if (t.kind === 'prompt') {
-      const prefix = promptPrefixes.find((p) => t.text.startsWith(p));
+      const prefix =
+        promptPrefixes.find((p) => t.text.startsWith(p)) ??
+        excludedPromptPrefixes.find((p) => t.text.startsWith(p));
       if (prefix) structure.push(`prompt:${prefix}`);
       else if (fixedLines.has(t.text)) structure.push(`prompt:${t.text}`);
     }
