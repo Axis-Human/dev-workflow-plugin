@@ -19,6 +19,16 @@
  * Usage:
  *   node slice-baseline.mjs [--window-days <n>] [--repo-dir <path>]...
  *     [--time-in-status <file|->] [--status-map '<json>'] [--no-github]
+ *     [--now <ISO date>]
+ *
+ *   --window-days     How far back to look (default 180).
+ *   --repo-dir        Repo to measure; repeat for a multi-repo product (default: cwd).
+ *   --time-in-status  The MCP response as a file, or `-` for stdin.
+ *   --status-map      JSON object of ClickUp status name → category
+ *                     (Backlog | Active | Review | QA | Done). Required with
+ *                     --time-in-status.
+ *   --no-github       Skip GitHub and read git merge commits only.
+ *   --now             Pretend "now" is this date, for repeatable output.
  *
  * Exit codes: 0 ok, with or without a baseline · 2 usage.
  *
@@ -31,12 +41,19 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 export const EXIT_USAGE = 2;
+/** Files a slice should stay within. Mirrors the limit in check-slice.mjs. */
 export const TARGET_FILES = 24;
+/** Hard file limit, reachable only by shallow changes. */
 export const CEILING_FILES = 45;
+/** Changes one developer should have open at the same time. */
 export const OPEN_LIMIT = 3;
+/** Fewest data points a figure needs before it is reported. */
 export const MIN_SAMPLE = 5;
+/** Below this many changed lines per file, a change counts as shallow. */
 export const SHALLOW_LINES_PER_FILE = 20;
+/** Categories every ClickUp status is mapped to through `--status-map`. */
 export const CATEGORIES = ['Backlog', 'Active', 'Review', 'QA', 'Done'];
+/** Printed instead of a report; the skill then falls back to these defaults. */
 export const NO_DELIVERY_BASELINE =
   'No delivery baseline (too few merged changes, no git history, or a squash-merged repo without GitHub access). Use the default rules: <=2 working days, <=24 files, at most 3 open per developer.';
 export const NO_FLOW_BASELINE =
@@ -45,14 +62,19 @@ export const NO_FLOW_BASELINE =
 const DEFAULT_WINDOW_DAYS = 180;
 const SEARCH_CAP = 1000; // GitHub search returns at most 1000 results.
 const DAY_MS = 24 * 60 * 60 * 1000;
+/** Time of day (UTC) at which `openAtOnce` counts the open changes. */
 const SAMPLE_HOUR_UTC = 14;
+/** Share of calendar time that falls on weekdays; ClickUp reports calendar minutes. */
 const WORKING_SHARE = 5 / 7;
 
+// Diagnostics go to stderr so stdout carries only the report the skill reads.
 const log = (...args) => process.stderr.write(args.join(' ') + '\n');
 
 // --- Pure helpers --------------------------------------------------------------
 
+/** A ticket id at the start of a lower-cased title, e.g. `[cu-86c0abc] ` or `abc-123: `. */
 const LEADING_TICKET = /^(?:\[[^\]]*\]|[a-z]+-\d[a-z0-9]*)\s*[:|-]?\s*/;
+/** Conventional change type at the start of a lower-cased title, optionally in brackets. */
 const CHANGE_TYPE = /^\[?(feat|feature|fix|refactor|chore|docs|test)\b/;
 
 /**
@@ -62,11 +84,19 @@ const CHANGE_TYPE = /^\[?(feat|feature|fix|refactor|chore|docs|test)\b/;
 const EXCLUDED_FILE =
   /(^|\/)(package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lockb?|Cargo\.lock|Gemfile\.lock|poetry\.lock|Pipfile\.lock|uv\.lock|composer\.lock|go\.sum|[^/]+\.lock)$|(^|\/)(dist|build|__generated__|generated)\/|\.(min\.(js|css)|snap|map)$|\.generated\./;
 
+/**
+ * @param {string | undefined} file Repo-relative path.
+ * @returns {boolean} True when the file must not count toward the file limits.
+ */
 export const isExcludedFile = (file) => EXCLUDED_FILE.test(file ?? '');
 
 /**
  * Change type from a PR title: `feat: x`, `[Feature] x`, or the same after a
  * leading ticket id such as `[CU-86c0abc]` or `ABC-123:`.
+ *
+ * @param {string | undefined} title PR title, or the merge commit's title.
+ * @returns {string} `hotfix` (anywhere in the title wins), `feat`, `fix`,
+ *   `refactor`, `chore`, `docs`, `test`, or `other`.
  */
 export function typeOf(title) {
   const t = (title ?? '').toLowerCase().trim();
@@ -78,9 +108,17 @@ export function typeOf(title) {
   return type === 'feature' ? 'feat' : type;
 }
 
-/** Monday–Friday days between two timestamps (ms, UTC), fractional. */
+/**
+ * Monday–Friday days between two timestamps (ms, UTC), fractional.
+ *
+ * @param {number} from Start, in epoch milliseconds.
+ * @param {number} to End, in epoch milliseconds.
+ * @returns {number} Weekday time between them, in days; 0 when `to <= from`.
+ */
 export function workingDays(from, to) {
   let days = 0;
+  // Step one UTC day at a time (the first and last steps may be partial days)
+  // and add only the time that falls on a weekday.
   for (let t = from; t < to;) {
     const next = Math.min(to, (Math.floor(t / DAY_MS) + 1) * DAY_MS);
     const weekday = new Date(t).getUTCDay();
@@ -92,11 +130,21 @@ export function workingDays(from, to) {
 
 /**
  * Release work, by branch or PR title: `v23.0.0`, `V24.0.0 -> Main`,
- * `release/x`, `release-please--…`.
+ * `release/x`, `release-please--…`. Release PRs bundle other changes, so
+ * counting them would double-count that work.
+ *
+ * @param {string | null | undefined} name Branch name or title.
+ * @returns {boolean}
  */
 export const isRelease = (name) => /^(v\d+\.\d+|release[-/])/i.test(name ?? '');
 
-/** Linear-interpolation percentile, rounded to 2 decimals; null when empty. */
+/**
+ * Linear-interpolation percentile, rounded to 2 decimals; null when empty.
+ *
+ * @param {number[]} values Unsorted values; not modified.
+ * @param {number} p Fraction between 0 and 1 (0.5 is the median).
+ * @returns {number | null}
+ */
 export function percentile(values, p) {
   if (values.length === 0) return null;
   const sorted = [...values].sort((a, b) => a - b);
@@ -106,9 +154,21 @@ export function percentile(values, p) {
   return Number((sorted[lo] + (sorted[hi] - sorted[lo]) * (rank - lo)).toFixed(2));
 }
 
+/**
+ * @template T
+ * @param {T[]} rows Must not be empty.
+ * @param {(row: T) => boolean} test
+ * @returns {number} Whole-number percentage of rows that pass `test`.
+ */
 const share = (rows, test) =>
   Math.round((100 * rows.filter(test).length) / rows.length);
 
+/**
+ * @template T, K
+ * @param {T[]} rows
+ * @param {(row: T) => K} key
+ * @returns {Array<[K, T[]]>} Groups in order of first appearance.
+ */
 function groupBy(rows, key) {
   const groups = new Map();
   for (const row of rows) {
@@ -119,16 +179,28 @@ function groupBy(rows, key) {
   return [...groups.entries()];
 }
 
-/** Shallow = fewer than 20 changed lines per counted file (moves, renames). */
+/**
+ * Shallow = fewer than 20 changed lines per counted file (moves, renames).
+ *
+ * @param {{ files: number, lines: number }} change Counted files and changed lines.
+ * @returns {boolean}
+ */
 export const isShallow = ({ files, lines }) =>
   files > 0 && lines / files < SHALLOW_LINES_PER_FILE;
 
 /**
  * Changes open (first commit done, not merged) at 14:00 UTC on each weekday in
  * the window, counting only the days that had something open.
+ *
+ * @param {DeliveryItem[]} rows One developer's changes.
+ * @param {object} window
+ * @param {number} window.since Window start, in epoch milliseconds.
+ * @param {number} window.now Window end, in epoch milliseconds.
+ * @returns {number[]} One open-change count per sampled weekday.
  */
 export function openAtOnce(rows, { since, now }) {
   const counts = [];
+  // 14:00 UTC on the day the window starts (36e5 ms = 1 hour).
   const first = Math.floor(since / DAY_MS) * DAY_MS + SAMPLE_HOUR_UTC * 36e5;
   for (let t = first; t < now; t += DAY_MS) {
     const weekday = new Date(t).getUTCDay();
@@ -139,6 +211,27 @@ export function openAtOnce(rows, { since, now }) {
   return counts;
 }
 
+/**
+ * One merged change, from either GitHub or git.
+ *
+ * @typedef {object} DeliveryItem
+ * @property {string} dev Author login (GitHub) or name (git).
+ * @property {string} type Change type from `typeOf`.
+ * @property {number} files Changed files, excluding lock files and generated output.
+ * @property {number} lines Added plus deleted lines in the counted files.
+ * @property {number} start First commit (or PR creation, if earlier), in epoch milliseconds.
+ * @property {number} end Merge time, in epoch milliseconds.
+ */
+
+/**
+ * One row of the delivery table.
+ *
+ * @param {string} type Change type, or `all`.
+ * @param {Array<DeliveryItem & { days: number }>} rows Changes of that type, with working days.
+ * @returns {object} Typical (median) and slow-end (85th percentile) figures, and
+ *   the share of changes over each limit. `wideShallowPct` is null when no
+ *   change falls between the target and the ceiling.
+ */
 function typeRow(type, rows) {
   const days = rows.map((r) => r.days);
   const files = rows.map((r) => r.files);
@@ -157,16 +250,30 @@ function typeRow(type, rows) {
   };
 }
 
-/** Delivery report data, or null when there are fewer than MIN_SAMPLE changes. */
+/**
+ * Delivery report data, or null when there are fewer than MIN_SAMPLE changes.
+ *
+ * @param {object} input
+ * @param {DeliveryItem[]} input.items Changes from every repo.
+ * @param {number} input.since Window start, in epoch milliseconds.
+ * @param {number} input.now Window end, in epoch milliseconds.
+ * @param {string} input.source Where the changes came from, for the report header.
+ * @param {number} input.windowDays Window length, for the report header.
+ * @returns {object | null} Input for `renderDelivery`.
+ */
 export function buildDeliveryReport({ items, since, now, source, windowDays }) {
+  // Only changes merged inside the window count.
   const rows = items
     .filter((r) => r.end >= since && r.end <= now)
     .map((r) => ({ ...r, days: workingDays(r.start, r.end) }));
   if (rows.length < MIN_SAMPLE) return null;
+  // Per-type rows, most common type first; types with too few changes are
+  // still counted in the `all` row.
   const types = groupBy(rows, (r) => r.type)
     .filter(([, group]) => group.length >= MIN_SAMPLE)
     .sort(([, a], [, b]) => b.length - a.length)
     .map(([type, group]) => typeRow(type, group));
+  // Work in progress per developer; skipped for anyone with too few open days.
   const developers = groupBy(rows, (r) => r.dev)
     .map(([dev, group]) => ({ dev, open: openAtOnce(group, { since, now }) }))
     .filter(({ open }) => open.length >= MIN_SAMPLE)
@@ -192,6 +299,14 @@ const minutesToWorkingDays = (minutes) => (minutes / 1440) * WORKING_SHARE;
  * Per-task working days in each category, from the MCP response
  * `{ tasks: { <id>: { status_history: [{ status, total_time_minutes }] } } }`.
  * Statuses missing from the map are reported, not guessed.
+ *
+ * @param {object} json The parsed MCP response, or its bare `tasks` object.
+ * @param {Record<string, string>} statusMap ClickUp status name → category.
+ *   Names are matched case-insensitively.
+ * @returns {{ rows: Array<Record<string, number>>, unmapped: string[] }} One
+ *   row per task with working days per category, and the lower-cased status
+ *   names that had no mapping.
+ * @throws {Error} When the map uses a category not in `CATEGORIES`.
  */
 export function parseTimeInStatus(json, statusMap) {
   const lookup = new Map(
@@ -223,7 +338,13 @@ export function parseTimeInStatus(json, statusMap) {
   return { rows, unmapped: [...unmapped] };
 }
 
-/** Flow report data, or null when there are fewer than MIN_SAMPLE tasks. */
+/**
+ * Flow report data, or null when there are fewer than MIN_SAMPLE tasks.
+ *
+ * @param {ReturnType<typeof parseTimeInStatus>} input Output of `parseTimeInStatus`.
+ * @returns {object | null} Input for `renderFlow`. Flow efficiency is the share
+ *   of in-work time (Active + Review + QA) spent Active, i.e. not waiting.
+ */
 export function buildFlowReport({ rows, unmapped }) {
   if (rows.length < MIN_SAMPLE) return null;
   const pick = (fn) => rows.map(fn);
@@ -253,6 +374,11 @@ export function buildFlowReport({ rows, unmapped }) {
   };
 }
 
+/**
+ * @param {NonNullable<ReturnType<typeof buildDeliveryReport>>} report
+ * @returns {string} The "Delivery baseline" markdown section. Developer names
+ *   appear in it, so the skill keeps this table out of ClickUp.
+ */
 export function renderDelivery(report) {
   const lines = [
     '## Delivery baseline',
@@ -279,6 +405,10 @@ export function renderDelivery(report) {
   return lines.join('\n') + '\n';
 }
 
+/**
+ * @param {NonNullable<ReturnType<typeof buildFlowReport>>} report
+ * @returns {string} The "Time-in-status baseline" markdown section.
+ */
 export function renderFlow(report) {
   const lines = [
     '## Time-in-status baseline',
@@ -298,6 +428,11 @@ export function renderFlow(report) {
 
 // --- Sources: GitHub first, git merge commits as the fallback ------------------
 
+/**
+ * One page (100) of merged PRs. `commits(first: 1)` gives the first commit's
+ * date, where the work started. `files(first: 100)` lists at most 100 files,
+ * so for larger PRs `changedFiles` is the real total.
+ */
 const PR_QUERY = `
 query MergedPullRequests($q: String!, $cursor: String) {
   search(query: $q, type: ISSUE, first: 100, after: $cursor) {
@@ -313,7 +448,12 @@ query MergedPullRequests($q: String!, $cursor: String) {
   }
 }`;
 
-/** Work PRs only (no bots, no release PRs), timed from the first commit. */
+/**
+ * Work PRs only (no bots, no release PRs), timed from the first commit.
+ *
+ * @param {object[]} nodes PullRequest nodes from `PR_QUERY`.
+ * @returns {DeliveryItem[]}
+ */
 export function parseGitHubPrs(nodes) {
   return nodes
     .filter(
@@ -327,6 +467,8 @@ export function parseGitHubPrs(nodes) {
       const firstCommit = Date.parse(p.commits?.nodes?.[0]?.commit?.authoredDate);
       const listed = p.files?.nodes ?? [];
       const counted = listed.filter((f) => !isExcludedFile(f.path));
+      // Excluded files are only known among the (up to 100) listed files, so
+      // they are subtracted from the real total; `lines` covers listed files only.
       const excluded = listed.length - counted.length;
       return {
         dev: p.author?.login ?? 'ghost',
@@ -339,6 +481,14 @@ export function parseGitHubPrs(nodes) {
     });
 }
 
+/**
+ * Runs git in `repoDir` and returns its stdout. Throws when git fails.
+ * The large buffer covers `git log` over long histories.
+ *
+ * @param {string} repoDir
+ * @param {string[]} args
+ * @returns {string}
+ */
 const git = (repoDir, args) =>
   execFileSync('git', args, {
     cwd: repoDir,
@@ -347,6 +497,11 @@ const git = (repoDir, args) =>
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
+/**
+ * @param {string} repoDir
+ * @returns {{ owner: string, repo: string } | null} The GitHub repo behind the
+ *   `origin` remote (HTTPS or SSH URL), or null when it is not on github.com.
+ */
 function githubOrigin(repoDir) {
   try {
     const url = git(repoDir, ['remote', 'get-url', 'origin']).trim();
@@ -357,6 +512,15 @@ function githubOrigin(repoDir) {
   }
 }
 
+/**
+ * Merged PRs from GitHub through `gh api graphql`.
+ *
+ * @param {object} input
+ * @param {string} input.repoDir Local clone whose `origin` names the GitHub repo.
+ * @param {number} input.since Window start, in epoch milliseconds.
+ * @returns {DeliveryItem[] | null} null means "use git instead": no GitHub
+ *   origin, `gh` missing or signed out, or the query failed.
+ */
 function fromGitHub({ repoDir, since }) {
   const origin = githubOrigin(repoDir);
   if (!origin) {
@@ -373,6 +537,7 @@ function fromGitHub({ repoDir, since }) {
     const q = `repo:${origin.owner}/${origin.repo} is:pr is:merged merged:>=${day}`;
     const nodes = [];
     let cursor = null;
+    // Page through the search until it runs out or hits GitHub's result cap.
     for (;;) {
       const args = ['api', 'graphql', '-f', `query=${PR_QUERY}`, '-f', `q=${q}`];
       if (cursor) args.push('-f', `cursor=${cursor}`);
@@ -395,7 +560,12 @@ function fromGitHub({ repoDir, since }) {
   }
 }
 
-/** Branch a merge commit brought in, from its subject line. */
+/**
+ * Branch a merge commit brought in, from its subject line.
+ *
+ * @param {string} subject e.g. `Merge pull request #12 from org/feat/x` or `Merge branch 'feat/x'`.
+ * @returns {string | null} The branch name (`feat/x`), or null for other subjects.
+ */
 export function mergeHead(subject) {
   return (
     /^Merge pull request #\d+ from [^/\s]+\/(\S+)/.exec(subject)?.[1] ??
@@ -404,7 +574,15 @@ export function mergeHead(subject) {
   );
 }
 
-/** Records printed by `git log --format=%H%x1f%cI%x1f%s%x1f%b%x1e`. */
+/**
+ * Records printed by `git log --format=%H%x1f%cI%x1f%s%x1f%b%x1e`.
+ * Fields are split on the ASCII unit separator (0x1f) and records on the
+ * record separator (0x1e), because subjects and bodies can hold any text.
+ *
+ * @param {string} raw The `git log` output.
+ * @returns {Array<{ sha: string, end: number, title: string, head: string | null }>}
+ *   `title` is the body's first line (the PR title on GitHub merges), else the subject.
+ */
 export function parseGitMerges(raw) {
   return raw
     .split('\x1e')
@@ -421,7 +599,13 @@ export function parseGitMerges(raw) {
     });
 }
 
-/** `git diff --numstat` output → counted files and changed lines. */
+/**
+ * `git diff --numstat` output → counted files and changed lines.
+ * Binary files print `-` for both counts and add no lines.
+ *
+ * @param {string} raw Lines of `<added>\t<deleted>\t<path>`.
+ * @returns {{ files: number, lines: number }}
+ */
 export function parseNumstat(raw) {
   let files = 0;
   let lines = 0;
@@ -434,8 +618,20 @@ export function parseNumstat(raw) {
   return { files, lines };
 }
 
+/**
+ * Merged changes from local git merge commits: the fallback when GitHub is
+ * unavailable. Squash or rebase merges leave no merge commit, so such repos
+ * yield few or no changes here.
+ *
+ * @param {object} input
+ * @param {string} input.repoDir
+ * @param {number} input.since Window start, in epoch milliseconds.
+ * @returns {DeliveryItem[]} Empty when the history can't be read.
+ */
 function fromGit({ repoDir, since }) {
   try {
+    // --first-parent keeps only merges into the current branch, not merges of
+    // the main branch back into feature branches.
     const raw = git(repoDir, [
       'log',
       '--merges',
@@ -446,6 +642,9 @@ function fromGit({ repoDir, since }) {
     return parseGitMerges(raw)
       .filter((m) => !isRelease(m.head) && !isRelease(m.title))
       .map((m) => {
+        // ^1 is the branch merged into, ^2 the merged branch. `^1..^2` lists
+        // the branch's own commits; the oldest gives the start and author.
+        // `^1...^2` diffs from their merge base, i.e. only the branch's changes.
         const [firstAt, dev] = git(repoDir, [
           'log',
           '--reverse',
@@ -475,6 +674,21 @@ function fromGit({ repoDir, since }) {
 
 // --- CLI -----------------------------------------------------------------------
 
+/**
+ * Parses the command line. See the file header for flags.
+ *
+ * @param {string[]} argv Arguments after `node slice-baseline.mjs`.
+ * @returns {{
+ *   windowDays: number,
+ *   repoDirs: string[],
+ *   github: boolean,
+ *   timeInStatus: string | null,
+ *   statusMap: Record<string, string> | null,
+ *   now: number,
+ * }} `repoDirs` are absolute and default to the working directory.
+ * @throws {Error} On an unknown flag, a missing or bad value, or
+ *   `--time-in-status` without `--status-map`.
+ */
 export function parseArgs(argv) {
   const opts = {
     windowDays: DEFAULT_WINDOW_DAYS,
@@ -487,6 +701,8 @@ export function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i];
     const value = argv[i + 1] ?? '';
+    // Takes the next argument as this flag's value. `-` (stdin) is allowed;
+    // another `--flag` means the value was left out.
     const needsValue = (what) => {
       if (!value || (value.startsWith('--') && value !== '-'))
         throw new Error(`${flag} needs ${what}`);
@@ -520,10 +736,16 @@ export function parseArgs(argv) {
   return opts;
 }
 
+/**
+ * @param {ReturnType<typeof parseArgs>} opts
+ * @returns {string} The delivery markdown section, or the "no baseline" line.
+ */
 function deliverySection(opts) {
   const since = opts.now - opts.windowDays * DAY_MS;
   const items = [];
   const sources = new Set();
+  // Each repo uses GitHub when it can and git otherwise, so one report can mix
+  // both sources; the header names every source used.
   for (const repoDir of opts.repoDirs) {
     const github = opts.github ? fromGitHub({ repoDir, since }) : null;
     items.push(...(github ?? fromGit({ repoDir, since })));
@@ -539,6 +761,12 @@ function deliverySection(opts) {
   return report ? renderDelivery(report) : NO_DELIVERY_BASELINE + '\n';
 }
 
+/**
+ * @param {ReturnType<typeof parseArgs>} opts
+ * @returns {string} The time-in-status markdown section, or the "no baseline" line.
+ * @throws {Error} When the input can't be read or parsed; `main` turns that
+ *   into the "no baseline" line.
+ */
 function flowSection(opts) {
   if (!opts.timeInStatus) return NO_FLOW_BASELINE + '\n';
   const raw = readFileSync(opts.timeInStatus === '-' ? 0 : opts.timeInStatus, 'utf8');
@@ -546,6 +774,13 @@ function flowSection(opts) {
   return report ? renderFlow(report) : NO_FLOW_BASELINE + '\n';
 }
 
+/**
+ * Prints both baseline sections to stdout. Returns the exit code instead of
+ * exiting, so it can be called from a test.
+ *
+ * @param {string[]} argv Arguments after `node slice-baseline.mjs`.
+ * @returns {number} 0, with or without a baseline; `EXIT_USAGE` on bad arguments.
+ */
 export function main(argv) {
   let opts;
   try {
@@ -555,6 +790,8 @@ export function main(argv) {
     log('See the header of slice-baseline.mjs for flags.');
     return EXIT_USAGE;
   }
+  // Bad time-in-status input must not block slicing: log it and carry on
+  // without that section.
   let flow;
   try {
     flow = flowSection(opts);
@@ -566,6 +803,7 @@ export function main(argv) {
   return 0;
 }
 
+// Run only when executed directly, not when imported (e.g. by a test).
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   process.exit(main(process.argv.slice(2)));
 }

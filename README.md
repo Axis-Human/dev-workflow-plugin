@@ -563,8 +563,7 @@ it out would make untracked spend — usually the largest slice — invisible.
   `UserPromptSubmit` stdout is injected into the model's context.
 - **Server gone for a long time**: the spool stops growing past 5 MB rather than
   filling the disk.
-- **Retries do not double-count**: the dashboard upserts on `(session_id,
-prompt_id)` for turns and on `agent_id` for sub-agent runs.
+- **Retries do not double-count**: the dashboard upserts on `(session_id, prompt_id)` for turns and on `agent_id` for sub-agent runs.
 
 ### Reading the numbers
 
