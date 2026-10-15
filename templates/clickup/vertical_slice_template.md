@@ -1,24 +1,28 @@
 # [SLICE {n}/{N}] {Imperative title naming the user-facing flow}
 
 ## Slice
+
 - **Parent story:** {story ID} — {story title}
 - **Slice:** {n} of {N} (implementation order)
 - **Scope:** {Full-stack | Frontend only | Backend only}
-- **Counterpart:** {{ID} — {title} | ⚠ none found | Not needed: no {backend | frontend} change | N/A: full-stack}
+- **Counterpart:** { {ID} — {title} | ⚠ none found | Not needed: no {backend | frontend} change | N/A: full-stack}
 - **Depends on:** {earlier slice IDs | None}
 
 ---
 
 ## Dark release
+
 - **Flag required:** {yes: `{flag name}` | no}
 - **Removal:** {Flag owner removes at go-live. | N/A}
 
 ## Data source
+
 - **Source:** {Stubbed contract, then real | Real contract | N/A}
 
 ---
 
 ## Definition of Ready
+
 - [ ] GWT defined
 - [ ] ≤ 2 working days (active)
 - [ ] ≤ 24 files changed (est.), or up to 45 if most of them are small edits such as renames or moved files
@@ -26,6 +30,7 @@
 - [ ] Dependencies resolved
 
 ## Definition of Done
+
 - [ ] Integrated to trunk
 - [ ] Unit tests pass
 - [ ] Code reviewed
@@ -38,14 +43,17 @@
 ---
 
 ## Vertical slice
+
 As a **{actor}**, I can **{observable behaviour}** [happy path].
 
 ## Acceptance criteria (GWT)
+
 - **Given** {context} **When** {action} **Then** {observable result}
 
 ---
 
 ## Estimate
+
 - **Active days:** ≤ 2 working days (hard limit)
 - **Files (est.):** {n} ({shallow | deep})
 - **Expected lead time:** {n.n} working days (active + typical review/QA wait)
@@ -57,22 +65,28 @@ As a **{actor}**, I can **{observable behaviour}** [happy path].
 ## Technical details
 
 ### Frontend
+
 - **Changes:** {UI, state, client-side data layer, flag wiring}
 - **Contract used:** {one sub-bullet per read or write site}
   - {read | write | event} `{exact operation name}` ({path}:{line}), uses `{type.field}`
+
 ```{language}
 {payload as a typed schema}
 ```
+
 - **Evidence:** {one sub-bullet per grounding}
   - `{repo}/{path} :: {symbol}` ({line or snippet})
 
 ### Backend
+
 - **Changes:** {endpoints, services, jobs, access rules, data}
 - **Contract provided:** {one sub-bullet per operation}
   - {read | write | event} `{exact operation name}` ({path}:{line}), extends `{type.field}`
+
 ```{language}
 {payload as a typed schema}
 ```
+
 - **Schema/migration delta:** {backward-compatible change | none}
 - **Evidence:** {one sub-bullet per grounding}
   - `{repo}/{path} :: {symbol}` ({line or snippet})
@@ -80,18 +94,22 @@ As a **{actor}**, I can **{observable behaviour}** [happy path].
 ---
 
 ## Unconfirmed contract points
+
 - **Confirmer:** {@ClickUp user | Tag the confirming developer here}
 - **A1** `{field or operation}`: assumed {value or shape}. Confirms: {Backend | Frontend} ({counterpart ID | ⚠ none found})
-{or: None}
+  {or: None}
 
 ## Contract confirmations
+
 Filled in by the confirming side. The implementing side then aligns its code and this slice.
+
 - **A1** Status: {Pending | Confirmed as assumed | Corrected: {actual value or shape}} · Confirmed by: {@ClickUp user, date} · Aligned in code: {No | Yes}
-{or: N/A: no unconfirmed points}
+  {or: N/A: no unconfirmed points}
 
 ---
 
 ## Design reference
+
 - **Design:** {link or frame name | none provided}
 - **States covered:** {populated, empty, error, read-only, flag off, …}
 - **Source material:** {document and section | none}
@@ -100,6 +118,7 @@ Filled in by the confirming side. The implementing side then aligns its code and
 ---
 
 ## Technical prompt
+
 _Use when handing this slice to an agent or a planning skill: copy the block below as-is._
 
 ```text
