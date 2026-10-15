@@ -1,6 +1,6 @@
 ---
 name: vertical-slice
-description: Developer-only. Splits one complete ClickUp user story ([US]) into thin vertical slices, numbered in implementation order. Each is independently deployable (≤2 working days, ≤24 files), sized against the repo's merged-PR history and the list's ClickUp time-in-status. After confirmation it creates them as subtasks on the story. Rejects anything that is not a complete user story.
+markdown_description: Developer-only. Splits one complete ClickUp user story ([US]) into thin vertical slices, numbered in implementation order. Each is independently deployable (≤2 working days, ≤24 files), sized against the repo's merged-PR history and the list's ClickUp time-in-status. After confirmation it creates them as subtasks on the story. Rejects anything that is not a complete user story.
 argument-hint: --ticket-id <id> [--window-days <n>] [--dry-run]
 allowed-tools: Read Grep Glob Bash AskUserQuestion TaskCreate mcp__clickup__clickup_get_task mcp__clickup__clickup_get_task_time_in_status mcp__clickup__clickup_filter_tasks mcp__clickup__clickup_get_bulk_tasks_time_in_status mcp__clickup__clickup_create_task mcp__clickup__clickup_add_task_link mcp__clickup__clickup_update_task
 effort: high
