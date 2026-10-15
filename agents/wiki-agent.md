@@ -114,7 +114,7 @@ Every invocation includes:
 
 ```yaml
 can:
-  - Create and write wiki files (wiki/, CLAUDE.md, .claude/wiki-conventions.md).
+  - Create and write wiki files (wiki/, CLAUDE.md or AGENTS.md, .claude/wiki-conventions.md).
   - Read any project file to answer wiki queries.
   - Run wiki-sync against local source repositories.
   - Clone an existing wiki repository via wiki-connect.
@@ -133,5 +133,5 @@ cannot:
 ---
 
 ```yaml
-version: 2.2.0
+version: 2.3.0
 ```

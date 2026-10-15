@@ -33,14 +33,13 @@ test -f wiki/index.md && echo "local" || (test -f wiki/wiki/index.md && echo "lo
   pages are in `wiki/wiki/`. Use `wiki/wiki/index.md` as the entry point
   and resolve all wiki page paths relative to `wiki/wiki/`.
 
-- **"missing"**: no wiki found. Tell the user "No wiki is available — no
-  local `wiki/` folder with an `index.md` was found. Run `/wiki-init` to
-  create a new wiki, or `/wiki-connect` to clone one from a remote
-  repository." Then stop.
-
-If `wiki/index.md` is not found but a `CLAUDE.md` exists at the project
-root, check whether it mentions a wiki location — it may indicate a custom
-path.
+- **"missing"**: before giving up, check whether an `AGENTS.md` or `CLAUDE.md`
+  exists at the project root (in that order) and mentions a wiki location —
+  it may indicate a custom path. If one does, use it as the entry point and
+  go to Step 1. Otherwise, tell the user "No wiki is available — no local
+  `wiki/` folder with an `index.md` was found. Run `/wiki-init` to create a
+  new wiki, or `/wiki-connect` to clone one from a remote repository." Then
+  stop.
 
 ---
 
