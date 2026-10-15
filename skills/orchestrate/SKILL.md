@@ -51,7 +51,19 @@ When it buys nothing, skip it.
   If "plugin-not-found": warn the user that the axis-human-ai-toolbox plugin
   may not be installed and stop.
 
-1_wiki_check: |
+1_project_context_check: |
+  Skip for anything on the fast path.
+  Read-only — never create or modify these files here; that is init-project's job.
+    bash: |
+      for f in AGENTS.md CLAUDE.md; do
+        test -f "$f" && echo "$f: exists" || echo "$f: missing"
+      done
+  Read whichever of AGENTS.md / CLAUDE.md exist, in that order, before touching
+  the wiki. They are the authoritative source for stack, conventions, and dev
+  commands when present — carry what they say into context_gathering and
+  dispatch below. If neither exists, proceed without them.
+
+2_wiki_check: |
   Skip for anything on the fast path.
   Otherwise:
     bash: test -f WIKI.md && echo "exists" || (test -f wiki/WIKI.md && echo "exists-nested" || echo "missing")
@@ -61,7 +73,7 @@ When it buys nothing, skip it.
             prompt: "operation=init — initialize the project wiki" })
   Wait for return before continuing.
 
-2_intent_classification: |
+3_intent_classification: |
   Classify the user's request as one of:
     quick_task     — Well-defined task, often with a ticket ID
     implementation — Plan already exists, wants code written now
@@ -73,17 +85,17 @@ When it buys nothing, skip it.
     code_review    — Review uncommitted or branch changes
     wiki           — Wiki operations or documented knowledge queries
 
-3_context_gathering: |
+4_context_gathering: |
   If a ClickUp ticket ID is mentioned (CU-xxx), fetch its details with
   mcp__clickup__clickup_get_task.
   If intent is unknown, ask ONE clarifying question.
 
-4_environment_setup: |
+5_environment_setup: |
   For code changes (quick_task, implementation, refactor, bug):
     bash: git checkout -b {task-id}-{slug}
   Use the ticket ID or a short kebab-case slug from the description.
 
-5_dispatch: |
+6_dispatch: |
   Route to the correct mechanism based on intent — see Routing Table below.
 ```
 
@@ -110,7 +122,7 @@ Workflow({
   args: {
     description: "<user request>",
     ticketId: "<CU-xxx if present>",
-    branch: "<branch name from step 4>",
+    branch: "<branch name from step 5>",
     baseBranch: "main"
   }
 })
@@ -139,11 +151,13 @@ can:
   - Classify intent and dispatch to workflows or agents.
   - Create feature branches for code changes.
   - Fetch ClickUp ticket details for context.
+  - Read AGENTS.md / CLAUDE.md for project context if they already exist.
   - Ask one clarifying question when intent is ambiguous.
   - Initialize the project wiki if missing.
   - Copy workflow scripts into the project for local use.
 
 cannot:
+  - Create or modify AGENTS.md / CLAUDE.md — that's init-project's job.
   - Write implementation code directly — dispatch to a workflow.
   - Merge code to any branch.
   - Approve code reviews.
