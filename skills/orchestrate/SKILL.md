@@ -4,7 +4,7 @@ description: >
   Classifies user intent and launches the appropriate workflow pipeline or
   specialized agent/skill. The central router for all ai-toolbox engineering
   work — handles wiki setup, context gathering, branch creation, and dispatch.
-argument-hint: "<task description or ticket ID>"
+argument-hint: '<task description or ticket ID>'
 allowed-tools: Workflow Agent Skill Bash Read AskUserQuestion mcp__clickup__clickup_get_task mcp__clickup__clickup_get_workspace_hierarchy
 effort: medium
 ---
@@ -18,6 +18,7 @@ effort: medium
 ## Fast path — answer, do not orchestrate
 
 If the request is any of the following, **answer it directly and stop**:
+
 - A question about the codebase, the toolbox, or how something works.
 - A lookup, explanation, or summary — anything read-only.
 - A single trivial edit (one file, a few lines, no design decision).
@@ -108,14 +109,15 @@ When it buys nothing, skip it.
 These intents run as deterministic workflow scripts via the Workflow tool.
 After step 0 copies them, they live at `.claude/workflows/` in the project.
 
-| Intent | Script | Pipeline |
-|---|---|---|
-| `quick_task` | `quick-task.js` | plan → test → implement → review → PR |
-| `implementation` | `implement.js` | test → implement → review → PR |
-| `refactor` | `refactor.js` | plan → implement → review → PR |
-| `bug` | `bug-fix.js` | reproduce → fix → review → PR |
+| Intent           | Script          | Pipeline                              |
+| ---------------- | --------------- | ------------------------------------- |
+| `quick_task`     | `quick-task.js` | plan → test → implement → review → PR |
+| `implementation` | `implement.js`  | test → implement → review → PR        |
+| `refactor`       | `refactor.js`   | plan → implement → review → PR        |
+| `bug`            | `bug-fix.js`    | reproduce → fix → review → PR         |
 
 Call pattern:
+
 ```
 Workflow({
   scriptPath: ".claude/workflows/<script>",
@@ -134,13 +136,13 @@ For `implementation` intent, also pass `subtasks` in args if the plan text is av
 
 These intents do not benefit from a workflow — invoke them directly:
 
-| Intent | Dispatch |
-|---|---|
-| `new_feature` | `Agent({ subagent_type: "axis-human-ai-toolbox:planning-features-agent", prompt: "<description + ticket context>" })` |
-| `design_system` | `Agent({ subagent_type: "axis-human-ai-toolbox:design-system-setup-agent", prompt: "<description>" })` |
-| `accessibility` | `Skill("axis-human-ai-toolbox:a11y-auditor")` |
-| `code_review` | `Skill("axis-human-ai-toolbox:code-review")` |
-| `wiki` | `Agent({ subagent_type: "axis-human-ai-toolbox:wiki-agent", prompt: "<query or operation>" })` |
+| Intent          | Dispatch                                                                                                              |
+| --------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `new_feature`   | `Agent({ subagent_type: "axis-human-ai-toolbox:planning-features-agent", prompt: "<description + ticket context>" })` |
+| `design_system` | `Agent({ subagent_type: "axis-human-ai-toolbox:design-system-setup-agent", prompt: "<description>" })`                |
+| `accessibility` | `Skill("axis-human-ai-toolbox:a11y-auditor")`                                                                         |
+| `code_review`   | `Skill("axis-human-ai-toolbox:code-review")`                                                                          |
+| `wiki`          | `Agent({ subagent_type: "axis-human-ai-toolbox:wiki-agent", prompt: "<query or operation>" })`                        |
 
 ---
 
@@ -157,7 +159,7 @@ can:
   - Copy workflow scripts into the project for local use.
 
 cannot:
-  - Create or modify AGENTS.md / CLAUDE.md — that's init-project's job.
+  - Create or modify AGENTS.md / CLAUDE.md — not orchestrate's job.
   - Write implementation code directly — dispatch to a workflow.
   - Merge code to any branch.
   - Approve code reviews.
