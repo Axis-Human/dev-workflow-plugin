@@ -4,7 +4,7 @@ description: >
   Classifies user intent and launches the appropriate workflow pipeline or
   specialized agent/skill. The central router for all ai-toolbox engineering
   work — handles wiki setup, context gathering, branch creation, and dispatch.
-argument-hint: "<task description or ticket ID>"
+argument-hint: '<task description or ticket ID>'
 allowed-tools: Workflow Agent Skill Bash Read AskUserQuestion mcp__clickup__clickup_get_task mcp__clickup__clickup_get_workspace_hierarchy
 effort: medium
 ---
@@ -18,6 +18,7 @@ effort: medium
 ## Fast path — answer, do not orchestrate
 
 If the request is any of the following, **answer it directly and stop**:
+
 - A question about the codebase, the toolbox, or how something works.
 - A lookup, explanation, or summary — anything read-only.
 - A single trivial edit (one file, a few lines, no design decision).
@@ -51,7 +52,19 @@ When it buys nothing, skip it.
   If "plugin-not-found": warn the user that the axis-human-ai-toolbox plugin
   may not be installed and stop.
 
-1_wiki_check: |
+1_project_context_check: |
+  Skip for anything on the fast path.
+  Read-only — never create or modify these files here; that is not orchestrate's job.
+    bash: |
+      for f in AGENTS.md CLAUDE.md; do
+        test -f "$f" && echo "$f: exists" || echo "$f: missing"
+      done
+  Read whichever of AGENTS.md / CLAUDE.md exist, in that order, before touching
+  the wiki. They are the authoritative source for stack, conventions, and dev
+  commands when present — carry what they say into context_gathering and
+  dispatch below. If neither exists, proceed without them.
+
+2_wiki_check: |
   Skip for anything on the fast path.
   Otherwise:
     bash: test -f WIKI.md && echo "exists" || (test -f wiki/WIKI.md && echo "exists-nested" || echo "missing")
@@ -61,7 +74,7 @@ When it buys nothing, skip it.
             prompt: "operation=init — initialize the project wiki" })
   Wait for return before continuing.
 
-2_intent_classification: |
+3_intent_classification: |
   Classify the user's request as one of:
     quick_task     — Well-defined task, often with a ticket ID
     implementation — Plan already exists, wants code written now
@@ -73,17 +86,17 @@ When it buys nothing, skip it.
     code_review    — Review uncommitted or branch changes
     wiki           — Wiki operations or documented knowledge queries
 
-3_context_gathering: |
+4_context_gathering: |
   If a ClickUp ticket ID is mentioned (CU-xxx), fetch its details with
   mcp__clickup__clickup_get_task.
   If intent is unknown, ask ONE clarifying question.
 
-4_environment_setup: |
+5_environment_setup: |
   For code changes (quick_task, implementation, refactor, bug):
     bash: git checkout -b {task-id}-{slug}
   Use the ticket ID or a short kebab-case slug from the description.
 
-5_dispatch: |
+6_dispatch: |
   Route to the correct mechanism based on intent — see Routing Table below.
 ```
 
@@ -96,21 +109,22 @@ When it buys nothing, skip it.
 These intents run as deterministic workflow scripts via the Workflow tool.
 After step 0 copies them, they live at `.claude/workflows/` in the project.
 
-| Intent | Script | Pipeline |
-|---|---|---|
-| `quick_task` | `quick-task.js` | plan → test → implement → review → PR |
-| `implementation` | `implement.js` | test → implement → review → PR |
-| `refactor` | `refactor.js` | plan → implement → review → PR |
-| `bug` | `bug-fix.js` | reproduce → fix → review → PR |
+| Intent           | Script          | Pipeline                              |
+| ---------------- | --------------- | ------------------------------------- |
+| `quick_task`     | `quick-task.js` | plan → test → implement → review → PR |
+| `implementation` | `implement.js`  | test → implement → review → PR        |
+| `refactor`       | `refactor.js`   | plan → implement → review → PR        |
+| `bug`            | `bug-fix.js`    | reproduce → fix → review → PR         |
 
 Call pattern:
+
 ```
 Workflow({
   scriptPath: ".claude/workflows/<script>",
   args: {
     description: "<user request>",
     ticketId: "<CU-xxx if present>",
-    branch: "<branch name from step 4>",
+    branch: "<branch name from step 5>",
     baseBranch: "main"
   }
 })
@@ -122,13 +136,13 @@ For `implementation` intent, also pass `subtasks` in args if the plan text is av
 
 These intents do not benefit from a workflow — invoke them directly:
 
-| Intent | Dispatch |
-|---|---|
-| `new_feature` | `Agent({ subagent_type: "axis-human-ai-toolbox:planning-features-agent", prompt: "<description + ticket context>" })` |
-| `design_system` | `Agent({ subagent_type: "axis-human-ai-toolbox:design-system-setup-agent", prompt: "<description>" })` |
-| `accessibility` | `Skill("axis-human-ai-toolbox:a11y-auditor")` |
-| `code_review` | `Skill("axis-human-ai-toolbox:code-review")` |
-| `wiki` | `Agent({ subagent_type: "axis-human-ai-toolbox:wiki-agent", prompt: "<query or operation>" })` |
+| Intent          | Dispatch                                                                                                              |
+| --------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `new_feature`   | `Agent({ subagent_type: "axis-human-ai-toolbox:planning-features-agent", prompt: "<description + ticket context>" })` |
+| `design_system` | `Agent({ subagent_type: "axis-human-ai-toolbox:design-system-setup-agent", prompt: "<description>" })`                |
+| `accessibility` | `Skill("axis-human-ai-toolbox:a11y-auditor")`                                                                         |
+| `code_review`   | `Skill("axis-human-ai-toolbox:code-review")`                                                                          |
+| `wiki`          | `Agent({ subagent_type: "axis-human-ai-toolbox:wiki-agent", prompt: "<query or operation>" })`                        |
 
 ---
 
@@ -139,11 +153,13 @@ can:
   - Classify intent and dispatch to workflows or agents.
   - Create feature branches for code changes.
   - Fetch ClickUp ticket details for context.
+  - Read AGENTS.md / CLAUDE.md for project context if they already exist.
   - Ask one clarifying question when intent is ambiguous.
   - Initialize the project wiki if missing.
   - Copy workflow scripts into the project for local use.
 
 cannot:
+  - Create or modify AGENTS.md / CLAUDE.md — not orchestrate's job.
   - Write implementation code directly — dispatch to a workflow.
   - Merge code to any branch.
   - Approve code reviews.
