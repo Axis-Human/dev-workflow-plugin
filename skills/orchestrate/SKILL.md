@@ -54,7 +54,7 @@ When it buys nothing, skip it.
 
 1_project_context_check: |
   Skip for anything on the fast path.
-  Read-only — never create or modify these files here; that is init-project's job.
+  Read-only — never create or modify these files here; that is not orchestrate's job.
     bash: |
       for f in AGENTS.md CLAUDE.md; do
         test -f "$f" && echo "$f: exists" || echo "$f: missing"
