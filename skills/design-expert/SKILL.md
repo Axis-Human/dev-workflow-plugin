@@ -55,6 +55,21 @@ tokens.json
 style-dictionary.config.*
 ```
 
+For PHP projects, the tokens are usually not in a config file at all:
+
+```
+resources/css/app.css
+public/css/*.css
+resources/views/components/**/*.blade.php
+tailwind.config.*          (often present but unused — verify against the views)
+config/*.php               (rarely, brand values in app config)
+```
+
+In Laravel the common case is **plain CSS with hardcoded values and no token layer**.
+Do not report "no design system found" and stop: the system exists implicitly in the
+stylesheet. Extract the values that repeat and report them as the de-facto palette,
+noting that they are not centralized.
+
 ### 2b — Global stylesheets
 
 Search for global CSS entry points:
@@ -64,6 +79,14 @@ globals.css  /  global.css
 index.css  /  main.css  /  app.css
 styles/globals.*  /  styles/index.*  /  styles/variables.*
 assets/styles/**
+```
+
+PHP / Laravel:
+
+```
+resources/css/app.css
+public/css/**
+resources/views/layouts/*.blade.php    (inline <style>, CDN font links)
 ```
 
 Read the files found — look for CSS custom properties (`--variable-name`), `@layer`, `@theme`, and `@font-face` declarations.
@@ -258,6 +281,12 @@ After writing, list every change made in the Step 5 summary (see below).
 ---
 
 ## Color System
+
+> **Check for the same color written more than one way.** `#2e587f`, `#2E587F` and
+> `rgb(46, 88, 127)` are one color and three strings; a near-miss like `#2d5880` next to
+> them is usually a typo nobody noticed. Normalize every value to lowercase hex before
+> grouping, then report duplicates and near-duplicates explicitly — in codebases without
+> a token layer this is the single most useful thing the audit produces.
 
 ### Brand / Primary
 

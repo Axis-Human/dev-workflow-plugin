@@ -14,6 +14,15 @@ effort: medium
 
 ## Step 1 — Load project context
 
+> **Not every stack documents components with Storybook.** In PHP/Laravel the component
+> layer is `resources/views/components/**/*.blade.php` (Blade components), plus Livewire
+> or Filament components when present. Storybook does not run against Blade, so
+> recommending it there is wrong advice. For those projects the realistic options are a
+> rendered component gallery served by the app itself (a route that renders each
+> component with sample props) or Markdown documentation beside the components. Detect
+> the stack before recommending a tool.
+
+
 Check whether `AGENTS.md` and `DESIGN.md` exist at the project root.
 
 - Read both if they exist — they provide the tech stack, styling approach, component library, and design tokens already documented.
