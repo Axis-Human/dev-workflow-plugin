@@ -92,9 +92,16 @@ Search the project root and subdirectories for the following files and patterns.
 - `yarn.lock` → Yarn
 - `bun.lockb` → Bun
 - `package-lock.json` → npm
-- `composer.lock` → Composer. Check `config.platform.php` in `composer.json`: when it is
-  set, it pins dependency resolution to that PHP version, and it is what the lock was
-  built against. A mismatch between it and the runtime is a common install failure.
+- `composer.lock` → Composer. Check `config.platform.php` in `composer.json`. Two failure
+  modes, both common:
+  - **Key absent.** The lock was resolved against whatever PHP the person who ran
+    `composer update` had locally. If that was newer than CI or the container, the lock
+    pins packages that refuse to install there.
+  - **Key set, but higher than the runtime.** Resolution targets a PHP the environment
+    does not have.
+
+  Record the declared `require.php` range, the `config.platform.php` value if present,
+  and whether they agree with the PHP the project actually runs on.
 
 **Environment & config**
 - `.env`, `.env.example`, `.env.local` → environment variables (list keys only, never values)

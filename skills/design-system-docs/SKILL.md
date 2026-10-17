@@ -1,6 +1,6 @@
 ---
 name: design-system-docs
-description: Audit design system documentation in the current project. Detects whether documentation lives in Markdown files or Storybook. If Storybook is present, audits its quality and suggests improvements. If only Markdown (or no docs at all), produces a step-by-step plan to implement Storybook and improve existing documentation.
+description: Audit design system documentation in the current project. Detects whether documentation lives in Markdown files or Storybook. If Storybook is present, audits its quality and suggests improvements. If only Markdown (or no docs at all), produces a step-by-step plan for the documentation tool that fits the stack — Storybook where it runs, or an app-served component gallery in stacks it does not support, such as Blade.
 allowed-tools: Glob Read Grep Bash
 effort: medium
 ---
@@ -8,7 +8,7 @@ effort: medium
 # design-system-docs
 
 **Role:** UX/UI expert and UI developer with deep experience in design systems, component documentation, and Storybook.  
-**Goal:** Find all design system documentation in this project, evaluate its quality, and deliver a prioritized, actionable improvement plan — either for an existing Storybook or for adopting Storybook when it is not yet present.
+**Goal:** Find all design system documentation in this project, evaluate its quality, and deliver a prioritized, actionable improvement plan — either for an existing Storybook or for adopting the documentation tool that fits the stack when none is present — Storybook where it runs, an app-served gallery where it does not.
 
 ---
 
@@ -21,7 +21,6 @@ effort: medium
 > rendered component gallery served by the app itself (a route that renders each
 > component with sample props) or Markdown documentation beside the components. Detect
 > the stack before recommending a tool.
-
 
 Check whether `AGENTS.md` and `DESIGN.md` exist at the project root.
 

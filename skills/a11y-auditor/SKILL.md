@@ -1,6 +1,6 @@
 ---
 name: a11y-auditor
-description: Audits code, components, or screenshots for accessibility barriers following WCAG 2.2 (Levels A, AA, AAA). Detects the environment automatically and runs only the relevant checks — Web (HTML, React, Next.js, Tailwind) or Mobile (React Native, Expo, Swift, Kotlin).
+description: Audits code, components, or screenshots for accessibility barriers following WCAG 2.2 (Levels A, AA, AAA). Detects the environment automatically and runs only the relevant checks — Web (HTML, React, Next.js, Laravel/Blade, Livewire, Twig, ERB, Django templates) or Mobile (React Native, Expo, Swift, Kotlin).
 argument-hint: [--level <A|AA|AAA>]
 allowed-tools: Read Grep Glob Bash
 effort: high
@@ -40,7 +40,9 @@ If an invalid value is given, inform the user and provide the list of available 
 
 ## Step 2 — Environment Detection
 
-Read `AGENTS.md` at the project root to determine the environment. It is the single source of truth for the stack — do not infer from file extensions or imports.
+Read `AGENTS.md` at the project root to determine the environment. It is the single source
+of truth for the stack — do not infer from file extensions or imports, **unless its Stack
+section names only a language and no framework; see the fallback below**.
 
 **If `AGENTS.md` exists:**
 - Read the `## Stack` section.
@@ -142,6 +144,13 @@ Once classified, **execute only the corresponding section below**. Skip the othe
 - Error suggestions are offered when known. *(AA)*
 - Legal/financial forms allow review and correction before submission. *(AA)*
 
+### Robust
+
+**4.1 — Compatible (A)**
+- HTML is valid (no duplicate IDs, no broken nesting that affects AT).
+- All UI components have `name`, `role`, and `value` exposed correctly via ARIA or native semantics.
+- Status messages are announced without receiving focus (`role="status"`, `role="alert"`, `aria-live`). *(2.1 — 4.1.3 AA)*
+
 ### Server-rendered templates (Blade, Twig, ERB, Django)
 
 When the markup comes from templates rather than components, these are the recurring
@@ -161,13 +170,6 @@ failures — check them explicitly:
   fields (3.3.1 A), and without `role="alert"` so they are never announced.
 - Tables emitted from a loop with `<td>` in the header row instead of `<th scope="col">`.
 - Status rendered as a colored dot, badge or row background with no text (1.4.1 A).
-
-### Robust
-
-**4.1 — Compatible (A)**
-- HTML is valid (no duplicate IDs, no broken nesting that affects AT).
-- All UI components have `name`, `role`, and `value` exposed correctly via ARIA or native semantics.
-- Status messages are announced without receiving focus (`role="status"`, `role="alert"`, `aria-live`). *(2.1 — 4.1.3 AA)*
 
 ---
 
