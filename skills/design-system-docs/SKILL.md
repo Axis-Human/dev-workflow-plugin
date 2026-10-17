@@ -231,9 +231,31 @@ Output findings in this format:
 
 ---
 
-# Section B — Storybook Implementation Plan
+# Section B — Documentation Implementation Plan
 
-*(Run this section only when Storybook is not present)*
+*(Run this section only when no component documentation tool is present)*
+
+---
+
+## B0 — Choose the tool before planning anything *(gate)*
+
+Storybook does not render every component model. Decide which plan to produce
+**before** writing any step, from the stack recorded in `AGENTS.md` and from what
+the components actually are:
+
+| Component model | Tool to plan |
+|---|---|
+| React, Vue, Svelte, Angular, Web Components, plain HTML/CSS | **Storybook** — continue with B1–B4 as written |
+| Blade (`resources/views/components/**/*.blade.php`), Livewire, Filament | **App-served gallery** — see B3-alt |
+| Twig, ERB, Django templates, other server-rendered partials | **App-served gallery** — see B3-alt |
+| Inertia (React/Vue pages inside Laravel) | **Storybook** — the components are React/Vue |
+
+If the stack is mixed, plan for the layer that holds the components being
+documented, and say which layer you chose.
+
+**Never produce a Storybook plan for a stack Storybook does not support.** A plan
+that opens with `storybook init` in a Blade project is wasted work: the init
+command has no `--type` for Blade, and the stories would have nothing to mount.
 
 ---
 
@@ -414,6 +436,40 @@ Based on the review in B1, apply these improvements to existing MD files:
 - Add Storybook to CI to catch visual regressions (Chromatic free tier or `test-storybook` for interaction tests)
 - When a component's API changes, update its story `args` and `argTypes` in the same PR
 ```
+
+---
+
+## B3-alt — Produce the gallery plan *(stacks without Storybook support)*
+
+Replaces B3's phases 1–3. Phases 4 and 5 (improve Markdown docs, continuous
+improvement) apply unchanged.
+
+**Phase 1 — A route that renders the catalog**
+
+Plan one route, reachable only outside production, that lists every component and
+renders each one with sample props. In Laravel:
+
+- `routes/web.php`: a `/design-system` route guarded by `App::environment('local')`
+- A controller that discovers the components by globbing
+  `resources/views/components/**/*.blade.php`
+- One view per component rendering its variants side by side with the props that
+  exercise each state
+
+Name the real files of **this** project; do not emit a generic scaffold.
+
+**Phase 2 — One sample-data file per component**
+
+Each component needs the props that show its states — default, loading, error,
+empty, long text. Plan where those fixtures live (a PHP array per component, or a
+single seeder) so the gallery and the tests can share them.
+
+**Phase 3 — Accessibility and visual checks on the gallery**
+
+The gallery is a real page, so it can be audited and tested like one: `/a11y-auditor`
+against the route, and Playwright screenshots per component if the project has E2E
+set up. This is the equivalent of Storybook's a11y and visual-regression addons,
+and it is why the gallery is worth building rather than documenting in Markdown
+alone.
 
 ---
 
