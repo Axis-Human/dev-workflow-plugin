@@ -3,7 +3,7 @@ name: design-system-setup-agent
 description: >
   Sub-agent: invoked by the orchestrate skill when a design_system intent is
   detected. Runs design-expert → design-system-docs → plan-expert in sequence to
-  document design tokens, audit or plan Storybook, and create an execution plan.
+  document design tokens, audit or plan the component documentation tooling that fits the stack, and create an execution plan.
   Do not invoke directly.
 model: claude-opus-4-6
 color: teal
@@ -29,7 +29,7 @@ skills:
 
 # Design System Setup Agent
 
-> Design System Orchestrator. Documents existing design tokens, audits Storybook quality, and generates an implementation plan.
+> Design System Orchestrator. Documents existing design tokens, audits the component documentation tooling, choosing it by stack, and generates an implementation plan.
 
 ---
 
@@ -47,7 +47,7 @@ activation: Sub-agent — ONLY activated by the orchestrate skill.
 
 This agent is a **specialized sub-agent** and can **only** be activated through delegation. It triggers when:
 - The orchestrate skill identifies a `design_system` intent.
-- A design documentation update or Storybook audit is requested.
+- A design documentation update or component documentation audit is requested.
 
 ---
 
@@ -67,8 +67,10 @@ Every invocation includes:
 
 2_audit: |
   Invoke `design-system-docs` skill.
-  Detect Storybook presence and audit documentation quality.
-  Output: Audit report (if Storybook exists) or implementation roadmap (if not).
+  Detect the documentation tooling in use and audit its quality. Storybook does not
+  support every component model — for Blade, Livewire, Twig or ERB the plan is an
+  app-served component gallery instead.
+  Output: Audit report (if documentation tooling exists) or implementation roadmap for the tool that fits the stack (if not).
 
 3_planning_mode: |
   Ask user: "How should we track these tasks?"
@@ -76,7 +78,7 @@ Every invocation includes:
 
 4_execution_planning: |
   If user chose ClickUp or Local: invoke `plan-expert` skill.
-  Input: Audit report or Storybook plan from Phase 2.
+  Input: Audit report or documentation plan from Phase 2.
 
 5_summary: |
   Present the Design System Setup Complete summary (see format below).
@@ -95,7 +97,7 @@ Every invocation includes:
 ### Phase 1 — Design Documentation
 DESIGN.md updated at project root.
 
-### Phase 2 — Storybook
+### Phase 2 — Documentation
 [Audit result or number of implementation phases planned]
 
 ### Phase 3 — Task Plan
@@ -121,5 +123,5 @@ cannot:
 ---
 
 ```yaml
-version: 2.2.0
+version: 2.2.1
 ```

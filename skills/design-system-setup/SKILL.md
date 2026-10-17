@@ -1,6 +1,6 @@
 ---
 name: design-system-setup
-description: End-to-end design system setup. Runs design-expert to extract and document all design information, then runs design-system-docs to audit or plan the Storybook implementation, and finally uses plan-expert to create a parent ClickUp ticket with all execution subtasks. Use when starting or improving the design system in a project.
+description: End-to-end design system setup. Runs design-expert to extract and document all design information, then runs design-system-docs to audit or plan the documentation tooling that fits the stack, and finally uses plan-expert to create a parent ClickUp ticket with all execution subtasks. Use when starting or improving the design system in a project.
 allowed-tools: Glob Read Grep Write Bash AskUserQuestion mcp__clickup__clickup_get_workspace_hierarchy mcp__clickup__clickup_get_task mcp__clickup__clickup_create_task TaskCreate TaskUpdate
 effort: high
 ---
@@ -25,13 +25,15 @@ Once `DESIGN.md` has been written or updated, store its full content as `DESIGN_
 
 ---
 
-## Phase 2 — Storybook Audit or Plan (`design-system-docs`)
+## Phase 2 — Documentation Audit or Plan (`design-system-docs`)
 
 Run the full `design-system-docs` skill as defined in its SKILL.md.
 
 This means:
 - Detect whether Storybook is present (Step 2a) and whether Markdown docs exist (Step 2b)
-- Branch to Section A (Storybook audit) or Section B (implementation plan) accordingly
+- Branch to Section A (Storybook audit) or Section B (implementation plan) accordingly.
+  Section B is stack-aware: it plans Storybook only where Storybook runs. For stacks it
+  does not support — Blade among them — it plans an app-served component gallery instead.
 - Complete all audit sub-steps or plan phases in full
 - Output the full report or plan
 
@@ -86,7 +88,8 @@ Capture the selected value as `LIST_ID`. Do not proceed to 3A.2 until both `WORK
 Determine the ticket title based on the Phase 2 branch:
 
 - **Storybook already exists (Section A was run):** `"Improve Storybook implementation"`
-- **No Storybook found (Section B was run):** `"Set up Storybook and design system documentation"`
+- **No Storybook found (Section B was run):** `"Set up design system documentation"` —
+  name the tool Section B actually chose for this stack in the ticket body
 
 Build the ticket description from `PHASE2_OUTPUT`:
 - Section A: summarize critical issues, improvements, and coverage gaps
@@ -135,10 +138,10 @@ Once all phases are complete, output this summary and stop:
 ### Phase 1 — Design Documentation
 DESIGN.md was written / updated at the project root.
 
-### Phase 2 — Storybook
+### Phase 2 — Documentation
 [Storybook audit completed — X critical issues, Y improvements identified]
   OR
-[Storybook implementation plan produced — 5 phases defined]
+[Documentation plan produced — 5 phases defined, tooling chosen for the stack]
 
 ### Phase 3 — Task Plan
 [ClickUp] Parent ticket: <PARENT_TICKET_URL> — Subtasks created: <count>

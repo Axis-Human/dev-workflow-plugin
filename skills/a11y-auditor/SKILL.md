@@ -1,6 +1,6 @@
 ---
 name: a11y-auditor
-description: Audits code, components, or screenshots for accessibility barriers following WCAG 2.2 (Levels A, AA, AAA). Detects the environment automatically and runs only the relevant checks — Web (HTML, React, Next.js, Tailwind) or Mobile (React Native, Expo, Swift, Kotlin).
+description: Audits code, components, or screenshots for accessibility barriers following WCAG 2.2 (Levels A, AA, AAA). Detects the environment automatically and runs only the relevant checks — Web (HTML, React, Next.js, Laravel/Blade, Livewire, Twig, ERB, Django templates) or Mobile (React Native, Expo, Swift, Kotlin).
 argument-hint: [--level <A|AA|AAA>]
 allowed-tools: Read Grep Glob Bash
 effort: high
@@ -40,13 +40,23 @@ If an invalid value is given, inform the user and provide the list of available 
 
 ## Step 2 — Environment Detection
 
-Read `AGENTS.md` at the project root to determine the environment. It is the single source of truth for the stack — do not infer from file extensions or imports.
+Read `AGENTS.md` at the project root to determine the environment. It is the single source
+of truth for the stack — do not infer from file extensions or imports, **unless its Stack
+section names only a language and no framework; see the fallback below**.
 
 **If `AGENTS.md` exists:**
 - Read the `## Stack` section.
-- Classify as **Web** if the framework is any of: HTML, React, Next.js, Remix, Astro, Nuxt, Svelte, Angular, or any browser-targeting stack.
+- Classify as **Web** if the framework is any of: HTML, React, Next.js, Remix, Astro, Nuxt,
+  Svelte, Angular, **Laravel/Blade, Livewire, Inertia, Symfony/Twig, Rails/ERB, Django
+  templates**, or any other stack that renders markup for a browser — server-rendered
+  counts, the audit is on the HTML that reaches the page.
 - Classify as **Mobile** if the framework is any of: React Native, Expo, Swift, SwiftUI, Kotlin, Jetpack Compose, or Flutter.
 - If the stack targets both (e.g., Expo Web), classify as **Web** and note the dual-target nature in the report.
+
+**If `AGENTS.md` exists but its Stack section is too vague to classify** (e.g. it names a
+language like "PHP" with no framework): do not stop. Look at what the project renders —
+`resources/views/**/*.blade.php`, `*.twig`, `*.erb`, `templates/**/*.html`, or JSX/TSX —
+and classify from that. Say in the report which signal you used.
 
 **If `AGENTS.md` does not exist:**
 Stop and inform the user:
@@ -140,6 +150,26 @@ Once classified, **execute only the corresponding section below**. Skip the othe
 - HTML is valid (no duplicate IDs, no broken nesting that affects AT).
 - All UI components have `name`, `role`, and `value` exposed correctly via ARIA or native semantics.
 - Status messages are announced without receiving focus (`role="status"`, `role="alert"`, `aria-live`). *(2.1 — 4.1.3 AA)*
+
+### Server-rendered templates (Blade, Twig, ERB, Django)
+
+When the markup comes from templates rather than components, these are the recurring
+failures — check them explicitly:
+
+- The root layout sets `<html lang="...">`. In Blade this lives in
+  `resources/views/layouts/*.blade.php` and is easy to miss because no component owns it.
+- Each page sets its own `<title>`. A single hardcoded title in the layout means every
+  page announces the same name (2.4.2 A). Look for a `@yield('title')` / `{% block %}`
+  mechanism or its absence.
+- Clickable `<div>` / `<span>` with `onclick`. Templates invite this because there is no
+  component boundary pushing you toward a real control. Each one is a 4.1.2 + 2.1.1
+  violation: no role, no keyboard, no focus.
+- Form fields paired with a label by proximity instead of `for`/`id`. Check that every
+  `<input>`, `<select>` and `<textarea>` has a `<label for>` that matches its `id`.
+- Validation errors rendered as a generic sentence instead of naming the offending
+  fields (3.3.1 A), and without `role="alert"` so they are never announced.
+- Tables emitted from a loop with `<td>` in the header row instead of `<th scope="col">`.
+- Status rendered as a colored dot, badge or row background with no text (1.4.1 A).
 
 ---
 

@@ -81,7 +81,7 @@ When it buys nothing, skip it.
     refactor       — Improve structure without changing behavior
     bug            — Broken behavior, error, or regression
     new_feature    — Unclear scope, needs discovery interview
-    design_system  — Design system or Storybook setup
+    design_system  — Design system or component documentation setup
     accessibility  — WCAG compliance check
     code_review    — Review uncommitted or branch changes
     wiki           — Wiki operations or documented knowledge queries
