@@ -28,12 +28,12 @@ instead of model-driven orchestrator delegation. Each script encodes a pipeline
 (e.g., plan → test → implement → review → PR) as plain JavaScript with
 structured schemas for data passing and a review retry loop.
 
-| Workflow | Pipeline | When |
-|---|---|---|
+| Workflow        | Pipeline                              | When                                      |
+| --------------- | ------------------------------------- | ----------------------------------------- |
 | `quick-task.js` | plan → test → implement → review → PR | Well-defined task, often with a ticket ID |
-| `implement.js` | test → implement → review → PR | Plan already exists |
-| `refactor.js` | plan → implement → review → PR | Restructuring without behavior change |
-| `bug-fix.js` | reproduce → fix → review → PR | Bug reports and regressions |
+| `implement.js`  | test → implement → review → PR        | Plan already exists                       |
+| `refactor.js`   | plan → implement → review → PR        | Restructuring without behavior change     |
+| `bug-fix.js`    | reproduce → fix → review → PR         | Bug reports and regressions               |
 
 The scripts live in `workflows/` and are invoked via the `Workflow` tool:
 
@@ -62,32 +62,33 @@ explorable page with search, focus and relationship tracing.
 
 Skills are reusable workflows invoked with a `/` command directly in Claude Code. Each skill is independent and can be used on its own.
 
-| Skill                   | Command                | What it does                                                                                                                                                                                                                                                                               |
-| ----------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **init-project**        | `/init-project`        | Scans the codebase and generates an `AGENTS.md` with the detected stack, structure, and dev commands. Run this first on any new project.                                                                                                                                                   |
-| **code-review**         | `/code-review`         | Two-phase code review: fast pre-commit checks (spec compliance, type safety, security) followed by a deep SOLID / KISS / DRY structural audit.                                                                                                                                             |
-| **a11y-auditor**        | `/a11y-auditor`        | Audits code or components for accessibility barriers against WCAG 2.2 (A, AA, AAA). Auto-detects web vs. mobile stack.                                                                                                                                                                     |
-| **plan-expert**         | `/plan-expert`         | Takes a ClickUp ticket or a free-form description and breaks it into detailed, ordered subtasks using a structured 8-section template. Creates subtasks on the ClickUp ticket or as a local task list.                                                                                     |
-| **design-expert**       | `/design-expert`       | Scans the project for all design-related information (colors, typography, spacing, component patterns, dark mode, design system) and generates or updates a `DESIGN.md` file.                                                                                                              |
-| **design-system-docs**  | `/design-system-docs`  | Audits design system documentation. If Storybook is present, reviews its quality and suggests improvements. If not, plans the tool that fits the stack — Storybook where it runs, an app-served component gallery where it does not, as in Blade.                                                                                                                          |
-| **design-system-setup** | `/design-system-setup` | End-to-end design system setup. Runs `design-expert` → `design-system-docs` → `plan-expert` in sequence to document the design system, audit or plan its documentation tooling (stack-aware — see `design-system-docs`), and create all execution tasks in ClickUp or locally.                                                                      |
-| **create-draft-pr**     | `/create-draft-pr`     | Creates a GitHub PR with a fully auto-populated standardized template. Infers base branch, derives description from the diff, detects shared code impact, tags stakeholders from CODEOWNERS, and builds a concrete test plan. Designed to run without human input when called by an agent. |
-| **implement-task**      | `/implement-task`      | Implements a task end-to-end. Given a ClickUp ticket ID or description, reads project context, plans at the file level, writes the code, runs automated checks + `code-review`, applies fixes, commits, and opens a PR via `create-draft-pr`.                                              |
-| **backlog-proposal**    | `/backlog-proposal`    | Turns a rough idea into a full backlog proposal — problem, evidence, affected users, solution, value, scope, technical analysis, estimate, risks, open questions. Reads the project's roles and modules from its ClickUp space first, then publishes the proposal back as a doc page. Runs *before* a feature becomes a ticket. |
+| Skill                   | Command                | What it does                                                                                                                                                                                                                                                                                                                    |
+| ----------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **init-project**        | `/init-project`        | Scans the codebase and generates an `AGENTS.md` with the detected stack, structure, and dev commands. Run this first on any new project.                                                                                                                                                                                        |
+| **code-review**         | `/code-review`         | Two-phase code review: fast pre-commit checks (spec compliance, type safety, security) followed by a deep SOLID / KISS / DRY structural audit.                                                                                                                                                                                  |
+| **a11y-auditor**        | `/a11y-auditor`        | Audits code or components for accessibility barriers against WCAG 2.2 (A, AA, AAA). Auto-detects web vs. mobile stack.                                                                                                                                                                                                          |
+| **plan-expert**         | `/plan-expert`         | Takes a ClickUp ticket or a free-form description and breaks it into detailed, ordered subtasks using a structured 8-section template. Creates subtasks on the ClickUp ticket or as a local task list.                                                                                                                          |
+| **design-expert**       | `/design-expert`       | Scans the project for all design-related information (colors, typography, spacing, component patterns, dark mode, design system) and generates or updates a `DESIGN.md` file.                                                                                                                                                   |
+| **design-system-docs**  | `/design-system-docs`  | Audits design system documentation. If Storybook is present, reviews its quality and suggests improvements. If not, produces a step-by-step plan to implement it.                                                                                                                                                               |
+| **design-system-setup** | `/design-system-setup` | End-to-end design system setup. Runs `design-expert` → `design-system-docs` → `plan-expert` in sequence to document the design system, audit or plan Storybook, and create all execution tasks in ClickUp or locally.                                                                                                           |
+| **create-draft-pr**     | `/create-draft-pr`     | Creates a GitHub PR with a fully auto-populated standardized template. Infers base branch, derives description from the diff, detects shared code impact, tags stakeholders from CODEOWNERS, and builds a concrete test plan. Designed to run without human input when called by an agent.                                      |
+| **implement-task**      | `/implement-task`      | Implements a task end-to-end. Given a ClickUp ticket ID or description, reads project context, plans at the file level, writes the code, runs automated checks + `code-review`, applies fixes, commits, and opens a PR via `create-draft-pr`.                                                                                   |
+| **backlog-proposal**    | `/backlog-proposal`    | Turns a rough idea into a full backlog proposal — problem, evidence, affected users, solution, value, scope, technical analysis, estimate, risks, open questions. Reads the project's roles and modules from its ClickUp space first, then publishes the proposal back as a doc page. Runs _before_ a feature becomes a ticket. |
+| **vertical-slice**      | `/vertical-slice`      | **Developer-only.** Splits one complete ClickUp user story into numbered, independently deployable vertical slices (≤2 working days, ≤24 files), sized from the repo's merged PRs and ClickUp time-in-status, and creates them as subtasks after confirmation. See [its README](skills/vertical-slice/README.md).               |
 
 ### Agents (sub-agents invoked by workflows)
 
 Agents are sub-agent definitions invoked by workflow pipelines (via `agentType`) or by the `orchestrate` skill for single-hop routes. There is no orchestrator agent — the `orchestrate` skill and workflow scripts handle all routing.
 
-| Agent                         | Activated when                                                                                           |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------- |
-| **planning-features-agent**   | `new_feature` intent — structured requirement interviews → FEATURE_SPEC + ClickUp ticket.                |
-| **plan-expert-agent**         | `quick_task`, `refactor` workflows — decomposes specs into 8-section subtasks.                           |
-| **quality-assurance-agent**   | `quick_task`, `implementation` workflows — writes failing tests (TDD red phase).                         |
-| **implement-task-agent**      | All multi-step workflows — writes code, runs review, commits.                                            |
-| **reviewer-agent**            | All multi-step workflows — independent code quality and security review gate.                            |
-| **bugfixer-agent**            | `bug` workflow — reproduces, isolates, and patches bugs with minimal scope.                              |
-| **design-system-setup-agent** | `design_system` intent — design-expert → design-system-docs → plan-expert pipeline.                      |
+| Agent                         | Activated when                                                                            |
+| ----------------------------- | ----------------------------------------------------------------------------------------- |
+| **planning-features-agent**   | `new_feature` intent — structured requirement interviews → FEATURE_SPEC + ClickUp ticket. |
+| **plan-expert-agent**         | `quick_task`, `refactor` workflows — decomposes specs into 8-section subtasks.            |
+| **quality-assurance-agent**   | `quick_task`, `implementation` workflows — writes failing tests (TDD red phase).          |
+| **implement-task-agent**      | All multi-step workflows — writes code, runs review, commits.                             |
+| **reviewer-agent**            | All multi-step workflows — independent code quality and security review gate.             |
+| **bugfixer-agent**            | `bug` workflow — reproduces, isolates, and patches bugs with minimal scope.               |
+| **design-system-setup-agent** | `design_system` intent — design-expert → design-system-docs → plan-expert pipeline.       |
 
 > **How to use:** Just describe what you want in natural language. The router hook and `orchestrate` skill route to the correct workflow automatically. Use `/` skills for direct, one-off invocations when you know exactly which step to run.
 
@@ -168,9 +169,9 @@ Or open `~/.claude/settings.json` and add it manually:
 
 ```json
 {
-	"enabledPlugins": {
-		"axis-human-ai-toolbox": true
-	}
+  "enabledPlugins": {
+    "axis-human-ai-toolbox": true
+  }
 }
 ```
 
@@ -247,6 +248,12 @@ All skills accept optional arguments. Run without arguments and the skill will a
 
 # Skip the project question and publish straight into that project's doc
 /backlog-proposal --project "Gilly" --doc-id y5416-17034 --output clickup
+
+# Slice a complete user story into vertical slices (developers only)
+/vertical-slice --ticket-id abc123xyz
+
+# Preview the slices and the ClickUp calls without writing anything
+/vertical-slice --ticket-id abc123xyz --dry-run
 ```
 
 ### Workflow pipelines
@@ -359,8 +366,12 @@ axis-human-ai-toolbox/
 │   │   └── SKILL.md
 │   ├── init-project/
 │   │   └── SKILL.md
-│   └── plan-expert/
-│       └── SKILL.md
+│   ├── plan-expert/
+│   │   └── SKILL.md
+│   └── vertical-slice/
+│       ├── SKILL.md
+│       ├── README.md                    # Usage, metrics, QA rule, smoke testing
+│       └── scripts/                     # slice-baseline.mjs, check-slice.mjs
 ├── hooks/
 │   ├── hooks.json                       # Which hook runs on which event
 │   ├── orchestrator-router.js           # UserPromptSubmit: classify and suggest workflow
@@ -523,16 +534,16 @@ export AI_TELEMETRY_TICKET='86abc9xyz'
 
 ### What is collected
 
-| Field | Source |
-|---|---|
-| Tokens (in, out, cache read, cache creation, thinking) | The session transcript's `usage` block |
-| Model, and every model a turn touched | Same |
-| Wall time, tool call count | Hook timestamps, `tool_use` blocks |
-| Sub-agent name and its own token usage | `SubagentStop` + that agent's transcript |
-| Cost in USD, lines added/removed | Claude Code's own `cost-state` at session end |
-| GitHub account of the machine | `gh auth status`, cached for a day |
-| ClickUp ticket | Branch name, or an id named in the prompt, or `AI_TELEMETRY_TICKET` |
-| Prompt length and SHA-256 | The prompt — **the text itself is never collected** |
+| Field                                                  | Source                                                              |
+| ------------------------------------------------------ | ------------------------------------------------------------------- |
+| Tokens (in, out, cache read, cache creation, thinking) | The session transcript's `usage` block                              |
+| Model, and every model a turn touched                  | Same                                                                |
+| Wall time, tool call count                             | Hook timestamps, `tool_use` blocks                                  |
+| Sub-agent name and its own token usage                 | `SubagentStop` + that agent's transcript                            |
+| Cost in USD, lines added/removed                       | Claude Code's own `cost-state` at session end                       |
+| GitHub account of the machine                          | `gh auth status`, cached for a day                                  |
+| ClickUp ticket                                         | Branch name, or an id named in the prompt, or `AI_TELEMETRY_TICKET` |
+| Prompt length and SHA-256                              | The prompt — **the text itself is never collected**                 |
 
 Prompt text is deliberately excluded. The dashboard is readable without a login,
 and a prompt can carry client data, credentials or proprietary code. Length and
@@ -552,8 +563,7 @@ it out would make untracked spend — usually the largest slice — invisible.
   `UserPromptSubmit` stdout is injected into the model's context.
 - **Server gone for a long time**: the spool stops growing past 5 MB rather than
   filling the disk.
-- **Retries do not double-count**: the dashboard upserts on `(session_id,
-  prompt_id)` for turns and on `agent_id` for sub-agent runs.
+- **Retries do not double-count**: the dashboard upserts on `(session_id, prompt_id)` for turns and on `agent_id` for sub-agent runs.
 
 ### Reading the numbers
 
