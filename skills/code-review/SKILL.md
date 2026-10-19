@@ -88,6 +88,20 @@ Check the detected stack (see `AGENTS.md` if available) and verify conventions a
 - Styling follows the project's chosen approach consistently
 - ORM/database queries follow the project's data-access layer patterns
 
+**PHP / Laravel** (the agency's default stack):
+- Business rules live in services or actions, not in controllers or Blade templates
+- Eloquent: no N+1 — relations accessed in a loop need `with()`; `whereHas` instead of
+  filtering a loaded collection in PHP
+- Money is stored as integer minor units, never float. Formatting happens in one place
+- Request validation uses `validate()` or a FormRequest, never manual `$request->input()`
+  checks scattered through the method
+- Mass assignment is guarded: `$fillable` covers exactly the fields the form sends
+- Migrations are additive and reversible; `down()` actually undoes `up()`
+- Blade escapes by default — every `{!! !!}` needs a reason, and user input inside one
+  is an XSS finding
+- `env()` is only called from `config/*.php`. Anywhere else it returns null once the
+  config is cached in production
+
 ### 1.4 Verification
 
 - [ ] Existing tests pass

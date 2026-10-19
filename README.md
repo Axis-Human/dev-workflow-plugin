@@ -225,7 +225,7 @@ All skills accept optional arguments. Run without arguments and the skill will a
 # Document the project's design system
 /design-expert
 
-# Audit or plan Storybook documentation
+# Audit the design system docs, or plan the tooling that fits the stack
 /design-system-docs
 
 # Full design system setup (design-expert + design-system-docs + plan-expert)

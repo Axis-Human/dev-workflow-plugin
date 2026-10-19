@@ -202,6 +202,8 @@ mkdir -p raw/[repo.name]
 ### 5.2 — CLAUDE.md
 
 If `CLAUDE.md` already exists with project content (not the framework's default), skip this step.
+This is independent of `AGENTS.md`: that file (from `/init-project`) holds stack and dev-command
+context, never vault structure or navigation, so its presence doesn't make this file redundant.
 
 Read `<skill dir>/../../templates/wiki/wiki-md-template.md` — relative to this
 skill's own directory, not the working directory — and replace:
@@ -511,12 +513,15 @@ and, when there are multiple repos, also by repository.
 
 ---
 
-### 5.9 — CLAUDE.md wiki section
+### 5.9 — AGENTS.md / CLAUDE.md wiki section
 
-Ensure the project's `CLAUDE.md` instructs agents to always consult the wiki before
-reading source code.
+Ensure the project's instructions file instructs agents to always consult the wiki
+before reading source code. Resolve this independently of Step 5.2 (which always
+targets the vault-orientation `CLAUDE.md`): use `AGENTS.md` if it exists, otherwise
+`CLAUDE.md`, matching the general-instructions convention `orchestrate` follows. If
+both exist, prefer `AGENTS.md` and leave `CLAUDE.md` as the vault-orientation file.
 
-**If `CLAUDE.md` does not exist:** create it with the following content (in `LANGUAGE`):
+**If neither `AGENTS.md` nor `CLAUDE.md` exists:** create `CLAUDE.md` with the following content (in `LANGUAGE`):
 
 ```markdown
 # [VAULT_NAME]
@@ -532,7 +537,7 @@ Do not grep the codebase for facts that may already be in the wiki.
 - Full catalog: `wiki/index.md`
 ```
 
-**If `CLAUDE.md` already exists:** check whether it contains a `## Wiki` section.
+**If `AGENTS.md` or `CLAUDE.md` already exists:** check whether it contains a `## Wiki` section.
 - If **not present**: append the following block at the end of the file (in `LANGUAGE`):
 
   ```markdown
@@ -631,7 +636,7 @@ Repos configured: [list with name, remote_url, stack, base_branch — or "none"]
 
 Files created:
   WIKI.md
-  CLAUDE.md
+  CLAUDE.md (vault orientation; wiki pointer section goes to AGENTS.md instead, if present)
   .claude/wiki-conventions.md
   wiki/sync-config.md
   wiki/index.md
