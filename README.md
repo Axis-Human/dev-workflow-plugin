@@ -94,7 +94,7 @@ Agents are sub-agent definitions invoked by workflow pipelines (via `agentType`)
 
 ### Standalone agents (Playwright test automation)
 
-These three agents are **not** part of the workflow pipelines. They form a self-contained end-to-end browser-testing pipeline and are invoked directly via `/agents` (or by naming them). They run against a live web app through the `playwright-test` MCP server.
+These three agents are **not** part of the workflow pipelines. They form a self-contained end-to-end browser-testing pipeline and are invoked **by naming them in the chat** (e.g. *"run the playwright-test-planner against http://localhost:3000"*). `/agents` no longer launches them: in current Claude Code that surface was removed, and `claude agents` manages background sessions, which is a different thing. They run against a live web app through the `playwright-test` MCP server.
 
 | Agent                         | Role                                                                                                                                                                   |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -301,7 +301,7 @@ playwright-test-planner  →  playwright-test-generator  →  playwright-test-he
 
 **How to run it**
 
-Invoke each agent in order via `/agents`, or just describe the step in natural language:
+Invoke each agent in order by naming it in the chat — `/agents` no longer launches them:
 
 ```
 # 1. Explore the app and produce a test plan
