@@ -1,20 +1,28 @@
 #!/usr/bin/env node
 /**
- * Format check for the lessons-learned-check report.
+ * Format check for the lessons-learned-check report, and for the comment
+ * left on a reused lesson (`--comment`).
  *
+ * Report:
  * Makes every run show matches the same way:
  *   - the fixed heading, or the fixed "no matches" line on its own
  *   - only the "Alta similitud" and "Confianza baja" sections, in that order, none empty
  *   - each match as `- [title](https://app.clickup.com/t/<id>) — **0.NN** · Project · Category`
  *   - scores with two decimals, inside their section's band, highest first
  *   - each match followed by its "Por qué…" and "Recomendación" lines, in that order
+ *   - Project and Category as option names, never drop-down indexes
  *   - no repeated lesson and no stray lines
+ *
+ * Comment (`--comment`):
+ *   - the fixed first line, then exactly Idea, Proyecto, Similitud, Fecha, in that order
+ *   - Similitud as **0.NN** above 0.70, Fecha as a real YYYY-MM-DD date
  *
  * Writes nothing. Prints "PASS" or the list of differences.
  * Uses Node built-ins only.
  *
  * Usage:
  *   node check-report.mjs <report.md|->
+ *   node check-report.mjs --comment <comment.md|->
  *
  * Exit codes: 0 pass · 1 differences found · 2 usage.
  */
@@ -45,9 +53,14 @@ const SECTIONS = [
   },
 ];
 
-/** `- [title](https://app.clickup.com/t/<id>) — **0.NN** · Project · Category` */
+/**
+ * `- [title](https://app.clickup.com/t/<id>) — **0.NN** · Project · Category`.
+ * A trailing `/…` or `?…` after the id is tolerated (copied links); the id is what counts.
+ */
 const ITEM =
-  /^- \[([^\]]+)\]\((https:\/\/app\.clickup\.com\/t\/[A-Za-z0-9]+)\) — \*\*(0\.\d{2}|1\.00)\*\* · ([^·]+?) · ([^·]+?)$/;
+  /^- \[([^\]]+)\]\(https:\/\/app\.clickup\.com\/t\/([A-Za-z0-9]+)(?:[/?]\S*)?\) — \*\*(0\.\d{2}|1\.00)\*\* · ([^·]+?) · ([^·]+?)$/;
+/** A bare number means a drop-down index was printed instead of the option name. */
+const NUMERIC = /^\d+$/;
 /** `  - **Label:** text` */
 const DETAIL = /^ {2}- \*\*([^*]+):\*\* (\S.*)$/;
 
@@ -110,14 +123,16 @@ export function checkReport(text) {
         continue;
       }
       items++;
-      const [, , url, raw] = item;
+      const [, , id, raw, project, category] = item;
       const score = Number(raw);
       if (!section.accepts(score))
         errors.push(`${at}: ${raw} is outside "${section.heading}" (${section.band})`);
       if (score > prevScore)
         errors.push(`${at}: not sorted by score (highest first)`);
-      if (seen.has(url)) errors.push(`${at}: lesson listed twice`);
-      seen.add(url);
+      if (seen.has(id)) errors.push(`${at}: lesson listed twice`);
+      seen.add(id);
+      if (NUMERIC.test(project) || NUMERIC.test(category))
+        errors.push(`${at}: Project/Category must be option names, not drop-down indexes`);
       prevScore = score;
       expectDetails = [section.reason, "Recomendación"];
       continue;
@@ -139,13 +154,58 @@ export function checkReport(text) {
   return errors;
 }
 
+export const COMMENT_HEADING = "♻️ Lección reusada en un discovery";
+const COMMENT_LABELS = ["Idea", "Proyecto", "Similitud", "Fecha"];
+
+/**
+ * @param {string} text the rendered comment for a reused lesson
+ * @returns {string[]} differences; empty when the comment is well formed
+ */
+export function checkComment(text) {
+  const lines = text
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((l) => l.trimEnd())
+    .filter((l) => l !== "");
+  const errors = [];
+  if (lines[0] !== COMMENT_HEADING)
+    errors.push(`line 1: expected "${COMMENT_HEADING}", got "${lines[0] ?? ""}"`);
+  if (lines.length !== 1 + COMMENT_LABELS.length)
+    errors.push(`expected ${1 + COMMENT_LABELS.length} lines, got ${lines.length}`);
+
+  COMMENT_LABELS.forEach((label, i) => {
+    const line = lines[i + 1] ?? "";
+    const m = /^- \*\*([^*]+):\*\* (\S.*)$/.exec(line);
+    if (!m || m[1] !== label) {
+      errors.push(`line ${i + 2}: expected "- **${label}:** …", got "${line.slice(0, 60)}"`);
+      return;
+    }
+    const value = m[2];
+    if (label === "Proyecto" && NUMERIC.test(value))
+      errors.push(`Proyecto must be an option name, not a drop-down index`);
+    if (label === "Similitud") {
+      const s = /^\*\*(0\.\d{2}|1\.00)\*\*$/.exec(value);
+      if (!s) errors.push(`Similitud must look like **0.86**, got "${value}"`);
+      else if (Number(s[1]) <= 0.7) errors.push(`Similitud ${s[1]} is not a reusable match (> 0.70)`);
+    }
+    if (label === "Fecha") {
+      const d = /^\d{4}-\d{2}-\d{2}$/.test(value) && new Date(`${value}T00:00:00Z`);
+      if (!d || Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== value)
+        errors.push(`Fecha must be a real YYYY-MM-DD date, got "${value}"`);
+    }
+  });
+  return errors;
+}
+
 /**
  * @param {string[]} argv
  * @returns {number} 0 pass, `EXIT_FAIL` differences found, `EXIT_USAGE` bad arguments or unreadable file.
  */
 export function main(argv) {
+  const comment = argv[0] === "--comment";
+  if (comment) argv = argv.slice(1);
   if (argv.length !== 1) {
-    process.stderr.write("Usage: node check-report.mjs <report.md|->\n");
+    process.stderr.write("Usage: node check-report.mjs [--comment] <file.md|->\n");
     return EXIT_USAGE;
   }
   let text;
@@ -156,7 +216,7 @@ export function main(argv) {
     process.stderr.write(`${err.message}\n`);
     return EXIT_USAGE;
   }
-  const errors = checkReport(text);
+  const errors = comment ? checkComment(text) : checkReport(text);
   if (errors.length === 0) {
     process.stdout.write("PASS\n");
     return 0;
