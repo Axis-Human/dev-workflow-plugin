@@ -39,7 +39,7 @@ Parse `$ARGUMENTS`:
 2. If the call fails or the ClickUp MCP server is unavailable, report `⚠ Could not read the lessons-learned list (<reason>). Skipping the check.` and return `{ DECISION: "continue", MATCHES: [] }`. Never block the discovery on this.
 3. Shortlist by title: drop lessons whose title is clearly about a different subject (team process, estimation habits, communication) when the idea is a product feature, and vice versa. Keep anything plausible — when unsure, keep it.
 4. For each shortlisted lesson, `mcp__clickup__clickup_get_task` with `include: ["description", "custom_fields"]`. Read:
-   - **Project** and **Category** custom fields. Both are `drop_down` fields: use the option's **name**, never a number. If `value` is an object, take `value.name`; if it is a number, it is the option's `orderindex` — resolve it with `type_config.options.find((o) => o.orderindex === value).name`. No value → `Sin proyecto` / `Sin categoría`.
+   - **Project** and **Category** custom fields. Both are `drop_down` fields: use the option's **name**, never a number. If `value` is an object, take `value.name`; if it is a number, it is the option's `orderindex` — resolve it with `type_config.options.find((o) => o.orderindex === value)?.name`. No value, or an index with no matching option → `Sin proyecto` / `Sin categoría`.
    - The body, usually *Qué pasó* / *Qué se aprendió* / *Recomendación*. Headings vary (e.g. *Qué aprendimos*, *Qué haríamos distinto*); treat the last one as the recommendation.
 
 ---

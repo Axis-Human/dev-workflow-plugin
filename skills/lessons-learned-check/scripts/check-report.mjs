@@ -156,6 +156,8 @@ export function checkReport(text) {
 
 export const COMMENT_HEADING = "♻️ Lección reusada en un discovery";
 const COMMENT_LABELS = ["Idea", "Proyecto", "Similitud", "Fecha"];
+/** `♻️` and `♻` print the same; drop the emoji variation selector (U+FE0F) before comparing. */
+const stripVS = (s) => s.replace(/\uFE0F/g, "");
 
 /**
  * @param {string} text the rendered comment for a reused lesson
@@ -168,7 +170,7 @@ export function checkComment(text) {
     .map((l) => l.trimEnd())
     .filter((l) => l !== "");
   const errors = [];
-  if (lines[0] !== COMMENT_HEADING)
+  if (stripVS(lines[0] ?? "") !== stripVS(COMMENT_HEADING))
     errors.push(`line 1: expected "${COMMENT_HEADING}", got "${lines[0] ?? ""}"`);
   if (lines.length !== 1 + COMMENT_LABELS.length)
     errors.push(`expected ${1 + COMMENT_LABELS.length} lines, got ${lines.length}`);

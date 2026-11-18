@@ -101,3 +101,7 @@ test("reuse comment format is enforced", () => {
   assert.ok(checkComment(COMMENT.replace("2026-11-18", "2026-02-30")).length > 0); // not a real date
   assert.ok(checkComment(COMMENT.replace("2026-11-18", "18/11/2026")).length > 0);
 });
+
+test("comment heading ignores the emoji variation selector", () => {
+  assert.deepEqual(checkComment(COMMENT.replace("\u267B\uFE0F", "\u267B")), []);
+});
