@@ -75,6 +75,7 @@ Skills are reusable workflows invoked with a `/` command directly in Claude Code
 | **implement-task**      | `/implement-task`      | Implements a task end-to-end. Given a ClickUp ticket ID or description, reads project context, plans at the file level, writes the code, runs automated checks + `code-review`, applies fixes, commits, and opens a PR via `create-draft-pr`.                                                                                   |
 | **backlog-proposal**    | `/backlog-proposal`    | Turns a rough idea into a full backlog proposal — problem, evidence, affected users, solution, value, scope, technical analysis, estimate, risks, open questions. Reads the project's roles and modules from its ClickUp space first, then publishes the proposal back as a doc page. Runs _before_ a feature becomes a ticket. |
 | **vertical-slice**      | `/vertical-slice`      | **Developer-only.** Splits one complete ClickUp user story into numbered, independently deployable vertical slices (≤2 working days, ≤24 files), sized from the repo's merged PRs and ClickUp time-in-status, and creates them as subtasks after confirmation. See [its README](skills/vertical-slice/README.md).               |
+| **lessons-learned-check** | `/lessons-learned-check` | Searches the agency's *Lecciones aprendidas* ClickUp list for similar features, scores them 0–1 (> 0.8 similar, > 0.7 low confidence) with an explanation, then asks whether to continue the discovery or reuse the existing lesson. Runs automatically at the start of every feature discovery. |
 
 ### Agents (sub-agents invoked by workflows)
 
@@ -82,7 +83,7 @@ Agents are sub-agent definitions invoked by workflow pipelines (via `agentType`)
 
 | Agent                         | Activated when                                                                            |
 | ----------------------------- | ----------------------------------------------------------------------------------------- |
-| **planning-features-agent**   | `new_feature` intent — structured requirement interviews → FEATURE_SPEC + ClickUp ticket. |
+| **planning-features-agent**   | `new_feature` intent — lessons-learned check, then structured requirement interviews → FEATURE_SPEC + ClickUp ticket. |
 | **plan-expert-agent**         | `quick_task`, `refactor` workflows — decomposes specs into 8-section subtasks.            |
 | **quality-assurance-agent**   | `quick_task`, `implementation` workflows — writes failing tests (TDD red phase).          |
 | **implement-task-agent**      | All multi-step workflows — writes code, runs review, commits.                             |
@@ -366,6 +367,9 @@ axis-human-ai-toolbox/
 │   │   └── SKILL.md
 │   ├── init-project/
 │   │   └── SKILL.md
+│   ├── lessons-learned-check/
+│   │   ├── SKILL.md
+│   │   └── scripts/                     # check-report.mjs (+ test): report format check
 │   ├── plan-expert/
 │   │   └── SKILL.md
 │   └── vertical-slice/

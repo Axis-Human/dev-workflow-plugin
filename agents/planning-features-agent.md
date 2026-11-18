@@ -10,13 +10,18 @@ color: yellow
 effort: high
 tools:
   - AskUserQuestion
+  - Bash
+  - Read
   - Skill
   - TaskCreate
   - TaskUpdate
   - mcp__clickup__clickup_get_task
   - mcp__clickup__clickup_create_task
   - mcp__clickup__clickup_get_workspace_hierarchy
+  - mcp__clickup__clickup_filter_tasks
+  - mcp__clickup__clickup_create_task_comment
 skills:
+  - lessons-learned-check
   - create-task
 ---
 
@@ -67,6 +72,10 @@ Do not dump all questions at once. Questions are grouped into phases. Ask one ph
 1_initial_baseline: |
   Use the seed description from the caller's payload. If it is empty or
   too vague to work with, ask: "What are we building?"
+1b_lessons_learned_check: |
+  Before any interview question, run the `lessons-learned-check` skill (via the
+  Skill tool) with the seed as `--input` and the project as `--project`.
+  See Step 1b detail below.
 2_phase_1_clarification: |
   Ask 3-5 high-level questions in a single AskUserQuestion call: problem vs
   solution, scope borders, target users, existing-feature context, priority driver.
@@ -90,6 +99,25 @@ Do not dump all questions at once. Questions are grouped into phases. Ask one ph
   Return { FEATURE_SPEC, TICKET_ID, TICKET_URL } to the orchestrate skill, using the
   Summary Format below.
 ```
+
+---
+
+## Step 1b detail — Lessons Learned Check
+
+Run `/lessons-learned-check --input "<seed>" --project "<project>"` before Phase 1,
+with the project name from the working directory's `AGENTS.md`, `CLAUDE.md` or
+`WIKI.md` (omit `--project` if none names it; it only boosts same-project lessons). It searches the agency's
+"Lecciones aprendidas" list, scores similar lessons 0–1, offers matches above 0.8
+(and above 0.7 as "confianza baja"), and asks whether to continue.
+
+- `DECISION: continue` — go on to Phase 1. Carry the matched lessons as context:
+  don't re-ask what a lesson already answers, and probe the risks they name in
+  Phase 3. List them under **Notes** in the FEATURE_SPEC.
+- `DECISION: reuse` — stop the interview. Skip Steps 2–7 and return the Reuse
+  Summary below with `FEATURE_SPEC`, `TICKET_ID` and `TICKET_URL` set to null.
+  The skill has already offered to comment on the reused lesson (its Step 5b);
+  do not create a ticket on this path.
+- If the check could not read ClickUp, it returns `continue` — never block on it.
 
 ---
 
@@ -277,6 +305,18 @@ The feature has been fully documented. Run `/plan-expert --ticket-id <TICKET_ID>
 an execution plan when you're ready to proceed.
 ```
 
+### Reuse Summary (when the lessons check returned `reuse`)
+
+```markdown
+## Discovery stopped — reusing an existing lesson
+
+**Lesson:** [<title>](<url>) (similarity <score>)
+**Recommendation:** <the lesson's recommendation>
+**Comment on the lesson:** <posted | not posted>
+
+No spec or ticket was created. Re-run discovery if the lesson turns out not to fit.
+```
+
 ---
 
 ## Boundaries
@@ -299,5 +339,5 @@ cannot:
 ---
 
 ```yaml
-version: 3.1.0
+version: 3.2.0
 ```
