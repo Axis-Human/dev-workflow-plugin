@@ -37,13 +37,13 @@ ClickUp structure this skill writes into (three task types, each a subtask of th
 
 Parse `$ARGUMENTS`: `--ticket-id <id|url>` (required), `--us-id <id|url>`, `--target <id|url>`, `--dry-run`. When the skill was triggered by a message instead of a command, take the ClickUp link or id from that message as `--ticket-id`.
 
-Validate and normalize every task reference (`--ticket-id`, `--us-id`, `--target` when it is a task):
+Validate and normalize `--ticket-id` and `--us-id` (a `--target` is resolved in Step 6, like a pasted destination):
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/skills/test-case-generation/scripts/check-test-cases.mjs" --ticket "<value>"
 ```
 
-`PASS <id>` → use `<id>`. `FAIL` → show the reason and ask for a valid ClickUp task id or `https://app.clickup.com/t/…` link. Never guess an id. A `--target` that is a list id (digits only) skips this check.
+`PASS <id>` → use `<id>`. `FAIL` → show the reason and ask for a valid ClickUp task id or `https://app.clickup.com/t/…` link. Never guess an id.
 
 ---
 
@@ -156,10 +156,10 @@ Skip the question when `--target` was given. Otherwise ask in plain chat, for th
 
 > "Where should I create the Test Plan? Paste the link (or id) of an existing **Test Scenario**, an existing **Test Plan** (to add the cases to it), or a **ClickUp list**."
 
-Work out what the reply is:
+Work out what the reply (or `--target`) is, in this order:
 
-- a task link (`…/t/…`) or task id → validate it as in Step 1, fetch it with `clickup_get_task`, and use its task type
-- anything else → check it as a list (`…/v/li/<id>`, a list view `…/v/l/6-<id>-1`, or a digits-only id):
+- a task link (`…/t/…`), or an id with at least one letter → validate it as in Step 1, fetch it with `clickup_get_task`, and use its task type
+- anything else, including a digits-only id (list ids are all digits) → check it as a list (`…/v/li/<id>`, a list view `…/v/l/6-<id>-1`, or the id):
 
   ```bash
   node "${CLAUDE_PLUGIN_ROOT}/skills/test-case-generation/scripts/check-test-cases.mjs" --list "<reply>"

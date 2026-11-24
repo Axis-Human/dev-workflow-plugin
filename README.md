@@ -1,6 +1,6 @@
 # Dev Workflow — Claude Code Plugin
 
-A Claude Code plugin with skills, agents and deterministic workflow pipelines for software teams. Covers end-to-end task delivery (plan → test → implement → review → PR), accessibility auditing, code review, project initialization, design system documentation, and feature planning backed by ClickUp.
+A Claude Code plugin with skills, agents and deterministic workflow pipelines for software teams. Covers end-to-end task delivery (plan → test → implement → review → PR), accessibility auditing, code review, project initialization, design system documentation, and feature planning and QA test case design backed by ClickUp.
 
 ---
 
