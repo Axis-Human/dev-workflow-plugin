@@ -1,6 +1,6 @@
 # Dev Workflow — Claude Code Plugin
 
-A Claude Code plugin with skills, agents and deterministic workflow pipelines for software teams. Covers end-to-end task delivery (plan → test → implement → review → PR), accessibility auditing, code review, project initialization, design system documentation, and feature planning backed by ClickUp.
+A Claude Code plugin with skills, agents and deterministic workflow pipelines for software teams. Covers end-to-end task delivery (plan → test → implement → review → PR), accessibility auditing, code review, project initialization, design system documentation, and feature planning and QA test case design backed by ClickUp.
 
 ---
 
@@ -76,6 +76,7 @@ Skills are reusable workflows invoked with a `/` command directly in Claude Code
 | **backlog-proposal**    | `/backlog-proposal`    | Turns a rough idea into a full backlog proposal — problem, evidence, affected users, solution, value, scope, technical analysis, estimate, risks, open questions. Reads the project's roles and modules from its ClickUp space first, then publishes the proposal back as a doc page. Runs _before_ a feature becomes a ticket. |
 | **vertical-slice**      | `/vertical-slice`      | **Developer-only.** Splits one complete ClickUp user story into numbered, independently deployable vertical slices (≤2 working days, ≤24 files), sized from the repo's merged PRs and ClickUp time-in-status, and creates them as subtasks after confirmation. See [its README](skills/vertical-slice/README.md).               |
 | **lessons-learned-check** | `/lessons-learned-check` | Searches the agency's *Lecciones aprendidas* ClickUp list for similar features, scores them 0–1 (> 0.8 similar, > 0.7 low confidence) with an explanation, then asks whether to continue the discovery or reuse the existing lesson. Runs automatically at the start of every feature discovery. |
+| **test-case-generation** | `/test-case-generation` | Generates a ClickUp Test Plan and its Test Cases (`TCNN - Area - Verify …`, with Preconditions / Steps / Expected Result) for one task, using its user story as context. Validates the task id and the output format with a script, always shows a dry-run, asks where to create them and writes only after approval. Requires the `Test Scenario`, `Test Plan` and `Test Case` task types. |
 
 ### Agents (sub-agents invoked by workflows)
 
@@ -255,6 +256,12 @@ All skills accept optional arguments. Run without arguments and the skill will a
 
 # Preview the slices and the ClickUp calls without writing anything
 /vertical-slice --ticket-id abc123xyz --dry-run
+
+# Generate a Test Plan and Test Cases for a task (asks for its user story if it isn't one)
+/test-case-generation --ticket-id https://app.clickup.com/t/abc123xyz
+
+# Preview the test cases and the ClickUp tasks without creating anything
+/test-case-generation --ticket-id abc123xyz --us-id def456uvw --dry-run
 ```
 
 ### Workflow pipelines
@@ -372,6 +379,9 @@ axis-human-ai-toolbox/
 │   │   └── scripts/                     # check-report.mjs (+ test): report format check
 │   ├── plan-expert/
 │   │   └── SKILL.md
+│   ├── test-case-generation/
+│   │   ├── SKILL.md
+│   │   └── scripts/                     # check-test-cases.mjs (+ test): ticket id + TC format check
 │   └── vertical-slice/
 │       ├── SKILL.md
 │       ├── README.md                    # Usage, metrics, QA rule, smoke testing
