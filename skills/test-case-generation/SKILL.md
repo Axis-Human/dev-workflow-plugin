@@ -26,7 +26,7 @@ ClickUp structure this skill writes into (three task types, each a subtask of th
 1. **A ClickUp task is required.** No `--ticket-id` (or a ClickUp link in the request) → ask for one. No free-text input, ever.
 2. **Test the task you were given.** The TCs cover the task passed in `--ticket-id`. The user story is context only: never write TCs for parts of the story the task does not touch.
 3. **Always a user story.** If the task is not a user story, ask for its user story before writing anything (Step 2).
-4. **The format is fixed, in English.** Every preview must pass `check-test-cases.mjs` before it is shown. Free text inside the TCs follows the task's language.
+4. **The format is fixed, in English.** Every preview must pass `check-test-cases.mjs` before it is shown. The fixed parts (`Verify`, section headings, `Source`, `User story`) stay in English on purpose, so plans read the same in every project; free text inside the TCs follows the task's language.
 5. **Dry-run before every write.** Nothing is created until the user has seen the dry-run (Step 7) and said yes. `--dry-run` stops after it.
 6. **Evidence, not guesses.** Every TC traces to an acceptance criterion, a described behaviour or an attached design of the task. Strings, labels, URLs and values are copied character for character. What the task leaves unclear goes into "Open questions" in chat, never into a TC.
 7. **Never edit or delete existing tasks.** This skill only creates.
@@ -43,7 +43,7 @@ Validate and normalize `--ticket-id` and `--us-id` (a `--target` is resolved in 
 node "${CLAUDE_PLUGIN_ROOT}/skills/test-case-generation/scripts/check-test-cases.mjs" --ticket "<value>"
 ```
 
-`PASS <id>` → use `<id>`. `FAIL` → show the reason and ask for a valid ClickUp task id or `https://app.clickup.com/t/…` link. Never guess an id.
+`PASS <id>` → use `<id>`. `FAIL` → show the reason and ask for a valid ClickUp task id or `https://app.clickup.com/t/…` link. A digits-only id fails on purpose: in ClickUp that is a list, and this skill needs a task. Never guess an id.
 
 ---
 
@@ -52,11 +52,11 @@ node "${CLAUDE_PLUGIN_ROOT}/skills/test-case-generation/scripts/check-test-cases
 ```
 mcp__clickup__clickup_get_task {
   task_id: "<ticket-id>",
-  include: ["description", "custom_fields", "attachments", "linked_tasks", "subtasks"]
+  include: ["description", "custom_fields", "attachments", "subtasks"]
 }
 ```
 
-If the call fails, say the ClickUp MCP is not connected or authenticated (`/mcp`) and stop.
+`attachments` returns the attached designs Step 4 reads (metadata only). If the call fails, say the task could not be read — the id may be wrong, or the ClickUp MCP is not connected or authenticated (`/mcp`) — and stop.
 
 The task is a **user story** when its title starts with `[US]` or its task type is "User Story". Then it is both the task under test and its own context; go to Step 3.
 
@@ -72,7 +72,7 @@ Validate the reply as in Step 1 and fetch it with `clickup_get_task` (`include: 
 
 ## Step 3 — Check the QA task types (hard gate)
 
-Find the workspace id (the number in a `/t/<workspace>/<id>` link, or `mcp__clickup__clickup_get_workspace_hierarchy`). Call `mcp__clickup__clickup_get_operators` with `model_operators: ["task_type.list"]` once, then:
+Find the workspace id (the number in a `/t/<workspace>/<id>` link, or `mcp__clickup__clickup_get_workspace_hierarchy`). There is no dedicated tool for task types; the ClickUp MCP exposes them through its operator catalog, and it requires `mcp__clickup__clickup_get_operators` (`model_operators: ["task_type.list"]`) once before the first `clickup_execute_operator` call. Its result is only that discovery; then:
 
 ```
 mcp__clickup__clickup_execute_operator {
@@ -227,6 +227,8 @@ Anything but an explicit "Create them" creates nothing.
 ## Step 8 — Create (only after yes)
 
 In this order, each with `mcp__clickup__clickup_create_task` in the destination's `list_id`:
+
+`task_type` takes the task type **name** (the ClickUp MCP resolves it, and fails if the type does not exist); do not switch it to the REST API's numeric `custom_item_id`.
 
 1. New Test Scenario (if any): `task_type: "Test Scenario"`, `markdown_description` as in "New Test Scenario description" (Step 6).
 2. New Test Plan (if any): `task_type: "Test Plan"`, `parent: <scenario id>`, `name` and `markdown_description` from the JSON `plan`.

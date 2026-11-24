@@ -49,7 +49,7 @@ test("ticket references are normalized to the task id", () => {
   assert.equal(parseTicket("not a ticket"), null);
   assert.equal(parseTicket("hola"), null);
   assert.equal(parseTicket("abcdefgh"), null); // no digit
-  assert.equal(parseTicket("31625254"), "31625254"); // shortcut: digit-only ids pass; list ids are told apart in SKILL.md
+  assert.equal(parseTicket("901413246506"), null); // digits only: a list id, not a task
   assert.equal(parseTicket("https://example.com/t/86bd2jj2t"), null);
 });
 
@@ -100,6 +100,18 @@ test("sections are required, ordered and well formed", () => {
   assert.ok(checkPreview(GOOD.replace("- The Storybook is accessible.\n\n#### Steps\n\n1. Open", "#### Steps\n\n1. Open")).errors.some((e) => e.includes("empty")));
   assert.ok(checkPreview(GOOD.replace("2. Click", "4. Click")).errors.some((e) => e.includes("out of order")));
   assert.ok(checkPreview(GOOD.replace("- The Storybook is accessible.", "The Storybook is accessible.")).errors.length > 0);
+});
+
+test("headings after a TC section fail instead of leaking into the payload", () => {
+  const leaked = GOOD + "\n## Open questions\n\n- mobile?\n";
+  assert.ok(checkPreview(leaked).errors.some((e) => e.includes("unexpected heading")));
+});
+
+test("Expected Result keeps its paragraphs", () => {
+  const two = GOOD.replace("The clicked day is committed and the panel closes.", "The clicked day is committed.\n\nThe panel closes.");
+  const { errors, cases } = checkPreview(two);
+  assert.deepEqual(errors, []);
+  assert.match(cases[0].markdown_description, /The clicked day is committed\.\n\nThe panel closes\.$/);
 });
 
 test("no test cases or stray lines fail", () => {

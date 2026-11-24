@@ -4,7 +4,7 @@
  *
  * `--ticket <id|url>`:
  *   Validates a ClickUp task reference and prints `PASS <task id>`.
- *   Accepts a bare id (`86bd2jj2t`), a custom id (`DEV-1234`) or a task URL
+ *   Accepts a bare id (`86bd2jj2t`), a custom id (`DEV-1234`) or a task URL; digits-only ids are lists
  *   (`https://app.clickup.com/t/<id>` or `/t/<workspace>/<id>`).
  *
  * `--list <id|url>`:
@@ -17,7 +17,7 @@
  *   - at least one `### TCNN - <Area> - Verify <behaviour>`, numbered consecutively from `--start`
  *   - each TC with `#### Preconditions` (bullets), `#### Steps` (1. 2. 3.)
  *     and `#### Expected Result` (text), in that order, none empty
- *   - no repeated TC title and no stray lines
+ *   - no repeated TC title and no stray lines or headings, before the first TC or inside one
  *   `--json` prints, on PASS, the exact ClickUp names and markdown descriptions to create.
  *
  * Writes nothing. Uses Node built-ins only.
@@ -36,8 +36,9 @@ import { pathToFileURL } from "node:url";
 export const EXIT_FAIL = 1;
 export const EXIT_USAGE = 2;
 
-// Native ids are lowercase alphanumeric with at least one digit (`86bd2jj2t`); custom ids look like `DEV-1234`.
-const ID = "((?=[a-z0-9]*[0-9])[a-z0-9]{6,12}|[A-Z][A-Z0-9]*-[0-9]+)";
+// Native ids are lowercase alphanumeric with a digit and a letter (`86bd2jj2t`); custom ids look like `DEV-1234`.
+// Digits-only ids are rejected: in ClickUp those are lists, not tasks.
+const ID = "((?=[a-z0-9]*[0-9])(?=[a-z0-9]*[a-z])[a-z0-9]{6,12}|[A-Z][A-Z0-9]*-[0-9]+)";
 const TICKET_URL = new RegExp(
   `^https?://app\\.clickup\\.com/t/(?:[0-9]+/)?${ID}(?:[/?#]\\S*)?$`,
 );
@@ -139,6 +140,10 @@ export function checkPreview(text, start = 1) {
       errors.push(`TC${tc.num}: unexpected line ${at(line)} before "#### Preconditions"`);
       continue;
     }
+    if (/^#{1,3} /.test(line)) {
+      errors.push(`TC${tc.num}: unexpected heading inside "${SECTIONS[section]}": ${at(line)}`);
+      continue;
+    }
     const name = SECTIONS[section];
     const body = tc.body[name];
     if (name === "Preconditions" && !BULLET.test(line))
@@ -173,7 +178,10 @@ export function checkPreview(text, start = 1) {
     },
     cases: cases.map((c) => ({
       name: `TC${c.num} - ${c.area} - ${c.title}`,
-      markdown_description: SECTIONS.map((s) => `## ${s}\n\n${(c.body[s] ?? []).join("\n")}`).join("\n\n"),
+      // Blank lines are dropped on read: list sections rejoin with "\n", Expected Result paragraphs with "\n\n".
+      markdown_description: SECTIONS.map(
+        (s) => `## ${s}\n\n${(c.body[s] ?? []).join(s === "Expected Result" ? "\n\n" : "\n")}`,
+      ).join("\n\n"),
     })),
   };
 }
