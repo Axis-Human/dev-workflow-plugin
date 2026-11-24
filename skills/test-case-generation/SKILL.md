@@ -234,6 +234,8 @@ In this order, each with `mcp__clickup__clickup_create_task` in the destination'
 2. New Test Plan (if any): `task_type: "Test Plan"`, `parent: <scenario id>`, `name` and `markdown_description` from the JSON `plan`.
 3. Each Test Case, in order: `task_type: "Test Case"`, `parent: <plan id>`, `name` and `markdown_description` from the JSON `cases`, copied exactly.
 
+After each call, check the task type of the created task: read it from the response, or with `clickup_get_task` when the response does not include it (the ClickUp MCP returns only the id and url). Check the Scenario, the Plan and the first TC one by one before creating the rest; once all TCs exist, one `clickup_get_task` on the plan with `include: ["subtasks"]` shows every TC's type. It must be the type you asked for. If it differs (for example a plain `Task`), stop: report the mismatch with the task's link, create nothing more, and leave fixing it to the user — never delete or edit it yourself.
+
 If a call fails, stop, report what was created (with links) and what was not. Never retry blindly — retrying can duplicate tasks.
 
 ---

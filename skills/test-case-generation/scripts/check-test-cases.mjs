@@ -17,7 +17,8 @@
  *   - at least one `### TCNN - <Area> - Verify <behaviour>`, numbered consecutively from `--start`
  *   - each TC with `#### Preconditions` (bullets), `#### Steps` (1. 2. 3.)
  *     and `#### Expected Result` (text), in that order, none empty
- *   - no repeated TC title and no stray lines or headings, before the first TC or inside one
+ *   - no repeated TC title, no stray line before the first TC, and no heading inside a TC
+ *     (plain text after the last `#### Expected Result` is read as another paragraph of it)
  *   `--json` prints, on PASS, the exact ClickUp names and markdown descriptions to create.
  *
  * Writes nothing. Uses Node built-ins only.
